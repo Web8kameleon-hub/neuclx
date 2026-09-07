@@ -1,0 +1,57 @@
+name: NeuCLX Commit Candidate
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Enforce developing maturity gate
+        run: python scripts/check_maturity.py
+      - name: Python tests and benchmark
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python -m unittest discover -s tests -v
+          python benchmarks/kernel_benchmark.py --output evidence/benchmark.json
+      - name: Build Python candidate
+        run: python scripts/build_release.py --version 0.1.0 --commit "${GITHUB_SHA}" --repository "${GITHUB_REPOSITORY}" --run-id "${GITHUB_RUN_ID}" --output candidate/python
+      - name: Test and pack npm candidate
+        working-directory: packages/npm
+        run: |
+          npm test
+          mkdir -p ../../candidate/npm
+          npm pack --pack-destination ../../candidate/npm
+      - name: Test and pack Rust candidate
+        working-directory: packages/rust
+        run: |
+          cargo test --locked
+          cargo package --allow-dirty --no-verify
+          mkdir -p ../../candidate/crates
+          cp target/package/*.crate ../../candidate/crates/
+      - name: Attach benchmark and policy documents
+        run: |
+          mkdir -p candidate/evidence candidate/docs
+          cp evidence/benchmark.json maturity.json candidate/evidence/
+          cp docs/*.md candidate/docs/
+      - uses: actions/upload-artifact@v7
+        with:
+          name: neuclx-candidate-${{ github.sha }}
+          path: candidate/
+          if-no-files-found: error
+          retention-days: 30

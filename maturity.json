@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "status": "developing",
+  "public_registry_publish": false,
+  "candidate_packages": {
+    "pypi": "neuclx",
+    "npm": "@web8kameleon/neuclx",
+    "crates_io": "neuclx-core"
+  },
+  "required_before_mature": [
+    "versioned public API",
+    "Python Node and Rust tests green",
+    "reproducible release artifacts",
+    "SLSA and SBOM attestations verified",
+    "benchmark history with declared thresholds",
+    "security review available",
+    "license selected",
+    "registry names verified and reserved"
+  ]
+}

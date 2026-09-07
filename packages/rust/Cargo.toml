@@ -1,0 +1,10 @@
+[package]
+name = "neuclx-core"
+version = "0.1.0"
+edition = "2021"
+description = "NeuCLX evidence-bound cognitive contracts"
+repository = "https://github.com/Web8kameleon-hub/neuclx"
+license = "LicenseRef-Proprietary"
+publish = false
+
+[dependencies]

@@ -1,0 +1,13 @@
+{
+  "name": "@web8kameleon/neuclx",
+  "version": "0.1.0",
+  "description": "NeuCLX evidence-bound cognitive contracts",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": "./src/index.js",
+  "files": ["src", "README.md"],
+  "scripts": {"test": "node --test", "pack:check": "npm pack --dry-run"},
+  "engines": {"node": ">=20"},
+  "publishConfig": {"access": "public"},
+  "license": "UNLICENSED"
+}
