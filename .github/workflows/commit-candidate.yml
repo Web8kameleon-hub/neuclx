@@ -40,8 +40,9 @@ jobs:
       - name: Test and pack Rust candidate
         working-directory: packages/rust
         run: |
-          cargo test --locked
-          cargo package --allow-dirty --no-verify
+          cargo generate-lockfile --offline
+          cargo test --locked --offline
+          cargo package --locked --allow-dirty --no-verify
           mkdir -p ../../candidate/crates
           cp target/package/*.crate ../../candidate/crates/
       - name: Attach benchmark and policy documents
