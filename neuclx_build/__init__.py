@@ -17,6 +17,9 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
     files = {}
     for path in Path("src/neuclx").glob("*.py"):
         files[f"neuclx/{path.name}"] = path.read_bytes()
+    for path in Path("src/neuclx/static").glob("*"):
+        if path.is_file():
+            files[f"neuclx/static/{path.name}"] = path.read_bytes()
     dist = "neuclx-0.1.0.dist-info"
     files[f"{dist}/METADATA"] = b"Metadata-Version: 2.1\nName: neuclx\nVersion: 0.1.0\n"
     files[f"{dist}/WHEEL"] = b"Wheel-Version: 1.0\nGenerator: neuclx_build\nRoot-Is-Purelib: true\nTag: py3-none-any\n"
@@ -32,4 +35,3 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
         for name, data in files.items():
             archive.writestr(name, data)
     return target.name
-

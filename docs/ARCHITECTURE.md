@@ -9,6 +9,12 @@ NeuCLX starts as a small auditable cognitive kernel, not a disguised wrapper aro
 3. H, V, JP, JL, VP, VL and W operators provide directional and wave projections.
 4. A result is emitted as a typed datum with an epistemic state and method.
 5. JONA evaluates every datum before release.
+6. Stigma Film Memory compresses the released datum into an immutable frame.
+7. The journey ledger records the frame as a successful stepping stone without changing its epistemic state.
+
+## One-page interface
+
+The standard-library HTTP server exposes a single multifunctional chat surface and two JSON endpoints: `POST /api/respond` and `GET /api/journey`. The browser loads compact journey records and never needs the entire cognitive lattice.
 
 ## Capability boundary
 
@@ -21,4 +27,3 @@ The current kernel implements deterministic ingestion, sparse cell construction,
 - repository corpus ingestion with immutable source revisions;
 - adversarial JONA tests;
 - reproducible quality, latency, memory, energy, and provenance benchmarks.
-

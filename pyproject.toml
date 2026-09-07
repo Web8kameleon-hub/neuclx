@@ -12,7 +12,7 @@ dependencies = []
 
 [project.scripts]
 neuclx = "neuclx.cli:main"
+neuclx-web = "neuclx.web:main"
 
 [tool.unittest]
 start-directory = "tests"
-
