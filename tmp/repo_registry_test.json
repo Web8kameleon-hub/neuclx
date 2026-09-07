@@ -1,0 +1,16 @@
+[
+  {
+    "id": "m-3",
+    "name": "registry-demo",
+    "source_type": "repo",
+    "location": "https://example.com/repo2",
+    "metadata": {
+      "kind": "git"
+    },
+    "hash": "hash-456",
+    "evidence_state": "computed",
+    "timestamp": "2026-09-07T21:17:15.227551",
+    "license": "MIT",
+    "version": "1.0.2"
+  }
+]

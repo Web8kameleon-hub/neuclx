@@ -16,3 +16,6 @@ neuclx-web = "neuclx.web:main"
 
 [tool.unittest]
 start-directory = "tests"
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
