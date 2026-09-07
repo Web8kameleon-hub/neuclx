@@ -12,6 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Enforce the single main tree
+        env:
+          NEUCLX_GIT_REF: ${{ github.ref }}
+          NEUCLX_EVENT: ${{ github.event_name }}
+        run: python scripts/enforce_main_only.py
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -21,4 +26,3 @@ jobs:
         env:
           PYTHONPATH: src
         run: python -m unittest discover -s tests -v
-

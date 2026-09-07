@@ -5,6 +5,7 @@
 3. JONA is the mandatory sandbox boundary. No code path may bypass its decision.
 4. Core code and tests use only the Python standard library. No external LLM, hosted inference API, model weight, or silent fallback.
 5. Imported ideas require an entry in `docs/SOURCE_LEDGER.md` with repository, path, revision, and adaptation status.
-6. Work on a branch; require tests before merging; do not force-push protected history.
-7. A future capability is documentation, never a runtime capability, until its test passes.
-
+6. NeuCLX is one continuously growing tree. The only permitted branch is `main`.
+7. Commit linearly to `main`; parallel branches, feature branches, release branches, and pull-request refs are forbidden.
+8. CI and CD must reject every Git ref except `refs/heads/main`. Never force-push or rewrite `main` history.
+9. A future capability is documentation, never a runtime capability, until its test passes.
