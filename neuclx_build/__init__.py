@@ -6,6 +6,9 @@ import csv
 import hashlib
 import io
 import zipfile
+import tarfile
+import gzip
+import io
 
 
 def _wheel_name():
@@ -34,4 +37,19 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
         for name, data in files.items():
             archive.writestr(name, data)
+    return target.name
+
+
+def build_sdist(sdist_directory, config_settings=None):
+    name = "neuclx-0.1.0"
+    target = Path(sdist_directory) / f"{name}.tar.gz"
+    included = [Path("pyproject.toml"), Path("README.md"), Path("AGENTS.md")]
+    included += [p for root in ("src", "tests", "neuclx_build", "scripts", "docs") for p in Path(root).rglob("*") if p.is_file() and "__pycache__" not in p.parts]
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w", format=tarfile.PAX_FORMAT) as archive:
+        for path in sorted(included):
+            info = archive.gettarinfo(str(path), arcname=f"{name}/{path}")
+            info.mtime = 0; info.uid = info.gid = 0; info.uname = info.gname = ""
+            with path.open("rb") as source: archive.addfile(info, source)
+    target.write_bytes(gzip.compress(buffer.getvalue(), compresslevel=9, mtime=0))
     return target.name
