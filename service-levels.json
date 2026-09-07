@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "workload": "deterministic-token-overlap-v1",
+  "sli": ["p95_latency_ns", "error_rate", "provenance_coverage"],
+  "slo": {
+    "p95_latency_ns_max": 5000000,
+    "error_rate_max": 0.0,
+    "provenance_coverage_min": 1.0
+  },
+  "sla": {
+    "status": "not_offered",
+    "reason": "No public hosted production service or customer contract exists."
+  },
+  "cd": {
+    "status": "not_configured",
+    "reason": "No deployment target has been declared."
+  }
+}
