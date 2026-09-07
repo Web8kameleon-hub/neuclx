@@ -18,7 +18,10 @@ jobs:
         env:
           NEUCLX_GIT_REF: ${{ github.ref }}
           NEUCLX_EVENT: ${{ github.event_name }}
+          NEUCLX_HEAD_REF: ${{ github.head_ref }}
         run: python scripts/enforce_main_only.py
+      - name: Validate 16-repository import provenance and deduplication
+        run: python scripts/validate_import_candidates.py
       - name: Verify release tag belongs to main history
         if: startsWith(github.ref, 'refs/tags/')
         run: |

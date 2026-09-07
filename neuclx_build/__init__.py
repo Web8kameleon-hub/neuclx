@@ -44,7 +44,7 @@ def build_sdist(sdist_directory, config_settings=None):
     name = "neuclx-0.1.0"
     target = Path(sdist_directory) / f"{name}.tar.gz"
     included = [Path("pyproject.toml"), Path("README.md"), Path("AGENTS.md")]
-    included += [p for root in ("src", "tests", "neuclx_build", "scripts", "docs") for p in Path(root).rglob("*") if p.is_file() and "__pycache__" not in p.parts]
+    included += [p for root in ("src", "tests", "neuclx_build", "scripts", "docs", "imports", "benchmarks", "packages") for p in Path(root).rglob("*") if p.is_file() and "__pycache__" not in p.parts and "target" not in p.parts]
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w", format=tarfile.PAX_FORMAT) as archive:
         for path in sorted(included):

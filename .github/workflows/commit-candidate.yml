@@ -3,6 +3,8 @@ name: NeuCLX Commit Candidate
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -23,12 +25,19 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - name: Enforce developing maturity gate
         run: python scripts/check_maturity.py
+      - name: Enforce Git policy
+        env:
+          NEUCLX_GIT_REF: ${{ github.ref }}
+          NEUCLX_EVENT: ${{ github.event_name }}
+          NEUCLX_HEAD_REF: ${{ github.head_ref }}
+        run: python scripts/enforce_main_only.py
       - name: Python tests and benchmark
         env:
           PYTHONPATH: src:.
         run: |
           python -m unittest discover -s tests -v
           python benchmarks/kernel_benchmark.py --output evidence/benchmark.json
+          python scripts/check_service_levels.py --benchmark evidence/benchmark.json --output evidence/service-level-report.json
       - name: Build Python candidate
         run: python scripts/build_release.py --version 0.1.0 --commit "${GITHUB_SHA}" --repository "${GITHUB_REPOSITORY}" --run-id "${GITHUB_RUN_ID}" --output candidate/python
       - name: Test and pack npm candidate

@@ -12,6 +12,11 @@ class SingleTreePolicyTests(unittest.TestCase):
     def test_pull_request_ref_fails(self):
         self.assertFalse(validate("refs/pull/2/merge", "pull_request")[0])
 
+    def test_only_controlled_mass_import_pr_passes(self):
+        self.assertTrue(validate("refs/pull/2/merge", "pull_request", "integration/import-16-repositories")[0])
+        self.assertFalse(validate("refs/pull/3/merge", "pull_request", "feature/other")[0])
+        self.assertTrue(validate("refs/heads/integration/import-16-repositories", "push")[0])
+
     def test_semantic_release_tag_passes(self):
         self.assertTrue(validate("refs/tags/v0.1.0", "push")[0])
 
