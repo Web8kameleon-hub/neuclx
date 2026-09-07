@@ -1,0 +1,18 @@
+[build-system]
+requires = []
+build-backend = "neuclx_build"
+backend-path = ["build_backend"]
+
+[project]
+name = "neuclx"
+version = "0.1.0"
+description = "Sovereign evidence-bound cognitive kernel"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+neuclx = "neuclx.cli:main"
+neuclx-web = "neuclx.web:main"
+
+[tool.unittest]
+start-directory = "tests"
