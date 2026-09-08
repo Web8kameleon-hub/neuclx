@@ -34,7 +34,7 @@ class EvidenceMemory:
 
     def __init__(self, path: str = "data/neuclx_memory.sqlite3"):
         self.path = path
-        self._connection = sqlite3.connect(self.path)
+        self._connection = sqlite3.connect(self.path, check_same_thread=False)
         self._initialize()
 
     def close(self):
@@ -71,7 +71,7 @@ class EvidenceMemory:
 
     def _connect(self) -> sqlite3.Connection:
         if self._connection is None:
-            self._connection = sqlite3.connect(self.path)
+            self._connection = sqlite3.connect(self.path, check_same_thread=False)
         return self._connection
 
     def _entry_from_datum(self, datum) -> MemoryEntry:

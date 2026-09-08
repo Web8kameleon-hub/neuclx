@@ -10,8 +10,9 @@ class JourneyTests(unittest.TestCase):
             try:
                 first=app.respond("unknown")
                 second=app.respond("sovereign",["NeuCLX is sovereign"])
-                self.assertEqual(first["achievement"],"success")
+                self.assertEqual(first["achievement"],"recorded")
                 self.assertEqual(first["response"]["state"],"unavailable")
+                self.assertEqual(second["achievement"],"success")
                 self.assertEqual(second["response"]["state"],"computed")
                 self.assertLessEqual(first["stigma_frame"]["compressed_bytes"],first["stigma_frame"]["original_bytes"])
                 self.assertEqual(len(app.ledger.recent()),2)

@@ -13,7 +13,7 @@ class JourneyLedger:
         self.path = str(path)
         self._lock = Lock()
         if self.path != ":memory:": Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        self._connection = sqlite3.connect(self.path)
+        self._connection = sqlite3.connect(self.path, check_same_thread=False)
         self._initialize()
 
     def close(self):
@@ -41,7 +41,7 @@ class JourneyLedger:
 
     def _connect(self):
         if self._connection is None:
-            self._connection = sqlite3.connect(self.path)
+            self._connection = sqlite3.connect(self.path, check_same_thread=False)
         return self._connection
 
     def record(self, prompt: str, response: Datum):
@@ -52,12 +52,18 @@ class JourneyLedger:
             cursor = connection.execute("INSERT INTO stones(created_at,prompt,frame_digest) VALUES(?,?,?)", (created, prompt, frame.digest))
             connection.commit()
             number = int(cursor.lastrowid)
-        return {"number": number, "created_at": created, "prompt": prompt, "achievement": "success", "response": response.as_dict(), "stigma_frame": frame.as_dict()}
+        achievement = "success" if response.state.value in {"measured", "computed"} else "recorded"
+        return {"number": number, "created_at": created, "prompt": prompt, "achievement": achievement, "response": response.as_dict(), "stigma_frame": frame.as_dict()}
 
     def recent(self, limit=50):
         limit = max(1, min(int(limit), 500))
         connection = self._connect()
         film = StigmaFilmMemory(connection)
         rows = connection.execute("SELECT number,created_at,prompt,frame_digest FROM stones ORDER BY number DESC LIMIT ?", (limit,)).fetchall()
-        return [{"number": n, "created_at": c, "prompt": p, "achievement": "success", "response": film.recall(d), "stigma_frame": {"digest": d}} for n,c,p,d in reversed(rows)]
+        entries = []
+        for n,c,p,d in reversed(rows):
+            response = film.recall(d)
+            achievement = "success" if response.get("state") in {"measured", "computed"} else "recorded"
+            entries.append({"number": n, "created_at": c, "prompt": p, "achievement": achievement, "response": response, "stigma_frame": {"digest": d}})
+        return entries
 

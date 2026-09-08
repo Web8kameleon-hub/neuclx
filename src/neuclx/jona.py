@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import StrEnum
+
 from .evidence import Datum, EvidenceState
 
 
@@ -15,7 +16,7 @@ class JonaSandbox:
 
     def evaluate(self, datum: Datum) -> PolicyDecision:
         if datum.state in {EvidenceState.UNAVAILABLE, EvidenceState.NOT_IMPLEMENTED}:
-            return PolicyDecision.ALLOW
+            return PolicyDecision.SANDBOX_ONLY
         if datum.state is EvidenceState.MEASURED and datum.source and datum.method:
             return PolicyDecision.ALLOW
         if datum.state is EvidenceState.COMPUTED and datum.method:

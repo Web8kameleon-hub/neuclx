@@ -19,6 +19,9 @@ class Axis(StrEnum):
     VP = "VP"
     VL = "VL"
     WAVE = "W"
+    TIME = "T"
+    SPACE = "S"
+    AUTHOR = "A"
 
 
 @dataclass(frozen=True, slots=True)

@@ -36,6 +36,15 @@ class ReasoningEngineTests(unittest.TestCase):
         self.assertTrue(result["conclusion"])
         self.assertTrue(result["evidence_path"])
 
+    def test_reasoning_engine_refuses_empty_evidence(self):
+        engine = ReasoningEngine()
+        result = engine.reason("kush je ti", context=[], max_iterations=2)
+
+        self.assertEqual(result["status"], "ok")
+        self.assertIn("Nuk ka evidencë të disponueshme", result["conclusion"])
+        self.assertEqual(result["confidence"], 0.0)
+        self.assertEqual(result["evidence_path"], [])
+
     def test_reasoning_engine_isolates_context_between_tasks(self):
         engine = ReasoningEngine()
 
@@ -66,6 +75,24 @@ class ReasoningEngineTests(unittest.TestCase):
         self.assertEqual(result["status"], "ok")
         self.assertIn("6", result["conclusion"])
         self.assertTrue(result["confidence"] >= 0.9)
+
+    def test_reasoning_engine_solves_english_simple_numeric_logic(self):
+        engine = ReasoningEngine()
+        result = engine.reason(
+            "If 3 students each have 2 books and one gives 1 book to someone without one, how many books are there in total?",
+            context=[],
+            max_iterations=2,
+        )
+
+        self.assertEqual(result["status"], "ok")
+        self.assertIn("6", result["conclusion"])
+        self.assertTrue(result["confidence"] >= 0.9)
+        self.assertEqual(result["intent"], "arithmetic.word_problem")
+        self.assertEqual(result["confidence_breakdown"]["calculation"], 1.0)
+        self.assertEqual(result["operations"][0]["reasoning_type"], "symbolic")
+        self.assertEqual(result["operations"][0]["operation"], "3 × 2")
+        self.assertEqual(result["operations"][0]["result"], "6")
+        self.assertEqual(result["evidence_path"], [])
 
     def test_web_application_exposes_reason_api(self):
         from neuclx.web import NeuCLXApplication

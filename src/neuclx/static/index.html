@@ -1,7 +1,7 @@
 <!doctype html><html lang="sq"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NeuCLX</title><link rel="stylesheet" href="/app.css"></head><body><main class="shell"><header><div class="brand"><b>N</b><span><strong>NeuCLX</strong><small>PURE COGNITIVE SYSTEM</small></span></div><div class="status">● JONA ACTIVE</div></header><section class="hero"><p>H · V · JP · JL · VP · VL · W</p><h1>Çdo përgjigje bëhet<br><em>një gur përpara.</em></h1><aside>Një faqe. Një inteligjencë. Çdo hap ruhet lehtë në Stigma Film Memory me burimin, metodën dhe gjendjen reale.</aside></section><section class="agent-console" aria-label="Bridge test console">
   <div class="agent-header"><h2>Bridge Test Console</h2><span>Alba · Albi · JONA</span></div>
   <div class="agent-controls">
-    <select id="agent-name">
+    <select id="agent-name" aria-label="Agent name">
       <option value="alba">Alba</option>
       <option value="albi">Albi</option>
       <option value="jona">JONA</option>
@@ -11,5 +11,54 @@
   </div>
   <output id="agent-output" aria-live="polite">Zgjidh një agjent dhe pyet një pyetje reale.</output>
 </section>
-<section id="journey" class="journey" aria-live="polite"></section><form id="chat"><label for="prompt">Hapi i ardhshëm</label><div class="composer"><textarea id="prompt" rows="2" placeholder="Pyet, ndërto, zbulo…" required></textarea><button>→</button></div><div class="fact"><input id="fact" placeholder="Fakt opsional"><span>Stigma Film · Provenance · No artificial fill</span></div></form></main><script src="/app.js" defer></script></body></html>
+<section class="reasoning-console" aria-label="Reasoning console">
+  <div class="agent-header"><h2>Live Reasoning Trace</h2><span>CoT · ToT · JONA</span></div>
+  <div class="reasoning-controls">
+    <textarea id="reasoning-task" rows="3" placeholder="Shkruaj pyetjen që dëshiron të arsyetosh…"></textarea>
+    <textarea id="reasoning-context" rows="3" placeholder="Fakte ose kontekst opsional (një fakt në një rresht)"></textarea>
+    <button type="button" id="reasoning-run">Run reasoning</button>
+  </div>
+  <div id="reasoning-output" class="reasoning-output" aria-live="polite">Pritet një pyetje e vërtetë për të filluar arsyetimin.</div>
+</section>
+<section id="journey" class="journey" aria-live="polite"></section><form id="chat"><label for="prompt">Hapi i ardhshëm</label><div class="composer"><textarea id="prompt" rows="2" placeholder="Pyet, ndërto, zbulo…" required></textarea><button type="submit">→</button></div><div class="fact"><input id="fact" placeholder="Fakt opsional"><span>Stigma Film · Provenance · No artificial fill</span></div></form></main><script>
+const reasoningTask=document.querySelector('#reasoning-task');
+const reasoningContext=document.querySelector('#reasoning-context');
+const reasoningRun=document.querySelector('#reasoning-run');
+const reasoningOutput=document.querySelector('#reasoning-output');
+
+reasoningRun.addEventListener('click', async () => {
+  const task = (reasoningTask.value || '').trim();
+  if (!task) {
+    reasoningOutput.textContent = 'Shkruaj një pyetje reale para se të fillosh reasoning.';
+    return;
+  }
+  const context = (reasoningContext.value || '')
+    .split(/\n|\r\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  reasoningOutput.innerHTML = '<strong>Po arsyetohet...</strong>';
+  const response = await fetch('/api/reason', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task, facts: context })
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    reasoningOutput.textContent = payload.detail || payload.error || 'Gabim në reason API';
+    return;
+  }
+  const steps = payload.trace?.steps || [];
+  const evidence = (payload.evidence_path || []).map((item) => `<li>${item}</li>`).join('');
+  const trace = steps.map((step, index) => `<div class="reason-step"><strong>Hapi ${index + 1}</strong> · ${step.reasoning_type} · ${step.status}<br><small>${step.hypothesis || 'Pa hipotezë'}</small></div>`).join('');
+  reasoningOutput.innerHTML = `
+    <div class="reasoning-summary">
+      <div><strong>Intent:</strong> ${payload.intent}</div>
+      <div><strong>Confidence:</strong> ${payload.confidence}</div>
+    </div>
+    <div><strong>Përfundim:</strong><br>${payload.conclusion}</div>
+    <div><strong>Evidence path:</strong><ul>${evidence || '<li>Pa evidencë të shfaqur</li>'}</ul></div>
+    <div><strong>Trace:</strong>${trace || '<div>Pa hapa</div>'}</div>
+  `;
+});
+</script><script src="/app.js" defer></script></body></html>
 

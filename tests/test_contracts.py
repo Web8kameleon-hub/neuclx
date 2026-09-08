@@ -15,6 +15,12 @@ class ContractTests(unittest.TestCase):
         datum = Datum("beyond frontier models", EvidenceState.DECLARED)
         self.assertEqual(JonaSandbox().evaluate(datum), PolicyDecision.SANDBOX_ONLY)
 
+    def test_unavailable_and_not_implemented_are_not_public_output(self):
+        unavailable = Datum(None, EvidenceState.UNAVAILABLE, method="knowledge-store-empty")
+        not_impl = Datum(None, EvidenceState.NOT_IMPLEMENTED, method="external-models-forbidden")
+        self.assertEqual(JonaSandbox().evaluate(unavailable), PolicyDecision.SANDBOX_ONLY)
+        self.assertEqual(JonaSandbox().evaluate(not_impl), PolicyDecision.SANDBOX_ONLY)
+
     def test_multilayer_hvwo_algebra(self):
         lattice = HVWOLattice(3)
         lattice.set(CognitiveCell(0, Axis.HORIZONTAL, 0, 0.5))

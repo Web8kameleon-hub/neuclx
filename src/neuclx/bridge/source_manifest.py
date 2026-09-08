@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 
@@ -25,7 +25,7 @@ class SourceManifest:
     metadata: Dict[str, Any] = field(default_factory=dict)
     hash: Optional[str] = None
     evidence_state: EvidenceState = EvidenceState.DECLARED
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     license: Optional[str] = None
     version: Optional[str] = None
 
