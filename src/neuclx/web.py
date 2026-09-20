@@ -22,6 +22,7 @@ from .reasoning_engine import ReasoningEngine
 from .stable_reasoning_engine import StableReasoningEngine
 from .vision_encoder import VisionEncoder
 from .creative_engine import CreativeEngine
+from .learning import LearningStore
 
 STATIC=Path(__file__).with_name("static")
 MIME={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8"}
@@ -30,12 +31,13 @@ class NeuCLXApplication:
     def __init__(self, ledger_path="data/neuclx.sqlite3"):
         ledger_path = str(ledger_path)
         self.kernel=CognitiveKernel(layers=8)
+        self.learning = LearningStore(str(Path(ledger_path).with_name(Path(ledger_path).stem + '_learning.sqlite3')))
         self.ledger=JourneyLedger(ledger_path)
         memory_path = str(Path(ledger_path).with_name(Path(ledger_path).stem + "_memory.sqlite3"))
         self.memory = EvidenceMemory(memory_path)
         stable_memory_path = str(Path(ledger_path).with_name(Path(ledger_path).stem + "_stable_memory.sqlite3"))
         self.stable_memory = EvidenceMemory(stable_memory_path)
-        self.model_adapter = ModelAdapter(provider="local", model_name="neuclx-core", enabled=True)
+        self.model_adapter = ModelAdapter(provider="local", model_name="neuclx-core", enabled=False)
         self.reasoning_engine = ReasoningEngine(memory=self.memory, model=self.model_adapter)
         self.stable_reasoning_engine = StableReasoningEngine(self.stable_memory, model_adapter=None)
         self.vision_encoder = VisionEncoder()
@@ -123,11 +125,9 @@ class NeuCLXApplication:
     def respond(self,prompt,facts=()):
         for fact in facts:
             if isinstance(fact,str) and fact.strip():
-                self.kernel.ingest("chat:user-declared", fact)
-                self._remember_fact(fact)
-        answer = self.kernel.answer(prompt)
-        if answer.state.value in {"measured", "computed"}:
-            self.memory.store(self.memory._entry_from_datum(answer))
+                digest = sha256(fact.encode('utf-8')).hexdigest()
+                self.learning.ingest('chat:user-declared:' + digest, 'sha256:' + digest, fact)
+        answer = self.learning.answer(prompt)
         return self.ledger.record(prompt, answer)
 
     def reason(self, task: str, facts=(), *, max_iterations: int = 5):
@@ -135,6 +135,39 @@ class NeuCLXApplication:
         if not task_text:
             raise ValueError("task is required")
         fact_list = [str(fact).strip() for fact in (facts or []) if isinstance(fact, str) and str(fact).strip()]
+        if not fact_list:
+            from .simple_logic_engine import SimpleLogicEngine
+            is_simple, simple_answer, simple_confidence = SimpleLogicEngine.detect_and_solve(task_text)
+            if is_simple and simple_answer is not None:
+                computed = Datum(
+                    simple_answer,
+                    EvidenceState.COMPUTED,
+                    source="simple_logic_engine",
+                    method="symbolic:detect_and_solve",
+                    metadata={"confidence": simple_confidence, "intent": "arithmetic.word_problem"},
+                )
+                stored = self.ledger.record(task_text, computed)
+                return {
+                    'task': task_text,
+                    'intent': 'arithmetic.word_problem',
+                    'state': 'computed',
+                    'conclusion': simple_answer,
+                    'confidence': simple_confidence,
+                    'confidence_state': 'computed',
+                    'evidence_path': [],
+                    'evidence_chain': [],
+                    'trace': {'steps': [{'reasoning_type': 'symbolic', 'status': 'success', 'hypothesis': simple_answer}]},
+                    'status': 'ok',
+                    'ledger': stored,
+                }
+            evidence = self.learning.answer(task_text)
+            stored = self.ledger.record(task_text, evidence)
+            return {'task': task_text, 'intent': 'document-retrieval', 'state': evidence.state.value,
+                    'conclusion': evidence.value or 'Nuk ka evidencë të disponueshme për këtë pyetje.',
+                    'confidence': None, 'confidence_state': 'unavailable',
+                    'evidence_path': [hit['source'] for hit in evidence.metadata.get('evidence_chain', [])],
+                    'evidence_chain': evidence.metadata.get('evidence_chain', []),
+                    'trace': {'steps': []}, 'status': 'ok', 'ledger': stored}
         result = self.reasoning_engine.reason(task_text, fact_list, max_iterations=max_iterations)
         stored = self.ledger.record(
             task_text,
@@ -308,6 +341,8 @@ def handler_factory(app):
 
         def do_GET(self):
             parsed=urlparse(self.path)
+            if parsed.path == '/api/learning':
+                return self._json(app.learning.status().as_dict())
             if parsed.path in {"/api/journey", "/api/v1/journey"}:
                 try:
                     return self._json({"stones": app.ledger.recent(parse_qs(parsed.query).get("limit", ["50"])[0])})
