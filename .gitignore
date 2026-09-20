@@ -3,3 +3,36 @@ __pycache__/
 data/
 dist/
 
+# Backups
+*.bak
+*.bak2
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+build/
+dist/
+
+# Test/coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+.venv/
+venv/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Runtime
+runtime/mali-cycles/*.jsonl
+tmp/*.json
