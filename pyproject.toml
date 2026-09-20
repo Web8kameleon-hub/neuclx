@@ -1,7 +1,7 @@
 [build-system]
 requires = []
 build-backend = "neuclx_build"
-backend-path = ["build_backend"]
+backend-path = ["."]
 
 [project]
 name = "neuclx"

@@ -12,22 +12,23 @@ class JourneyTests(unittest.TestCase):
                 second=app.respond("sovereign",["NeuCLX is sovereign"])
                 self.assertEqual(first["achievement"],"recorded")
                 self.assertEqual(first["response"]["state"],"unavailable")
-                self.assertEqual(second["achievement"],"success")
-                self.assertEqual(second["response"]["state"],"computed")
+                self.assertEqual(second["achievement"],"recorded")
+                self.assertEqual(second["response"]["state"],"declared")
                 self.assertLessEqual(first["stigma_frame"]["compressed_bytes"],first["stigma_frame"]["original_bytes"])
                 self.assertEqual(len(app.ledger.recent()),2)
             finally:
                 app.close()
                 del app
 
-    def test_fact_ingestion_persists_verified_memory(self):
+    def test_fact_ingestion_persists_declared_memory(self):
         with tempfile.TemporaryDirectory() as directory:
             app = NeuCLXApplication(Path(directory)/"journey.sqlite3")
             try:
                 app.respond("what is neuclx", ["NeuCLX is sovereign and evidence-bound"])
-                stored = app.memory.search("sovereign")
-                self.assertTrue(any("sovereign" in item.content.lower() for item in stored))
-                self.assertTrue(any(item.evidence_state == "computed" for item in stored))
+                stored = app.learning.answer("sovereign")
+                self.assertIn("sovereign", stored.value)
+                self.assertEqual(stored.state.value, "declared")
+                self.assertEqual(app.memory.search("sovereign"), [])
             finally:
                 app.close()
                 del app

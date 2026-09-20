@@ -97,7 +97,7 @@ function renderStone(stone) {
   const response = stone.response || {};
   const metadata = response.metadata || {};
   const state = String(response.state || 'unknown');
-  const value = response.value === null ? 'Nuk ka ende rezultat të disponueshëm.' : JSON.stringify(response.value);
+  const value = response.value === null ? 'Nuk ka ende rezultat të disponueshëm.' : typeof response.value === 'string' ? response.value : JSON.stringify(response.value);
   const article = document.createElement('article');
   article.className = 'stone';
   article.innerHTML = `

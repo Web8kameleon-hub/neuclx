@@ -1,6 +1,7 @@
 import json
 import threading
 import unittest
+import tempfile
 from pathlib import Path
 from urllib import request, error
 
@@ -9,7 +10,9 @@ from neuclx.web import NeuCLXApplication, handler_factory
 
 class ApiV1RouteTests(unittest.TestCase):
     def _server_for(self):
-        app = NeuCLXApplication(Path("/tmp/neuclx_test_api.sqlite3"))
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        app = NeuCLXApplication(Path(directory.name) / "journey.sqlite3")
         handler = handler_factory(app)
         server = __import__("http.server").server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
         port = server.server_address[1]

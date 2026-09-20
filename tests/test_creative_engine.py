@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import threading
 import unittest
+import tempfile
 from pathlib import Path
 from urllib import request
 
@@ -94,7 +95,9 @@ class CreativeEngineTests(unittest.TestCase):
 
 class CreativeApiTests(unittest.TestCase):
     def _server_for(self):
-        app = NeuCLXApplication(Path("/tmp/neuclx_test_creative.sqlite3"))
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        app = NeuCLXApplication(Path(directory.name) / "journey.sqlite3")
         handler = handler_factory(app)
         server = __import__("http.server").server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
         port = server.server_address[1]

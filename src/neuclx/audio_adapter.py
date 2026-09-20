@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 import math
 from pathlib import Path
@@ -14,6 +14,8 @@ from typing import Any, Dict
 @dataclass(slots=True)
 class AudioGenerator:
     output_dir: str = "data/creative_outputs"
+    output_dir_path: Path = field(init=False)
+    sample_rate: int = field(init=False)
 
     def __post_init__(self):
         self.output_dir_path = Path(self.output_dir)
