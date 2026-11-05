@@ -171,6 +171,15 @@ and an OpenAPI description, so a minimal local host exposing
 is not part of the repository and `NEUCLX_FLUID_PIPELINE_NAME=JsonDataStep`.
 This one run verifies neither deployment health nor sustained quality.
 
+`measured`: A second live run with `NEUCLX_MODEL_ENABLED=true`, the explicitly
+configured local Ollama model `llama3.1:8b` (OpenAI-compatible
+`/v1/chat/completions`, no download) and all three modules returned a model
+answer alongside the 11 JONA-allowed stages. The answer is labeled
+`Model-generated response; not independently verified.` and is not
+retrieval-grounded; the factual claims in it were not checked against a source.
+Hybrid-Fluid passes only the question, declared facts and two computed service
+signals to the model.
+
 `unavailable`: Beyond that run, deployment health and runtime quality of the
 services are not verified, and the other FluidEngine pipelines are not hosted
 or tested. Local fixture tests verify HTTP request shapes, JONA vetoes, stage

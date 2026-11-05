@@ -256,6 +256,7 @@ if (reasoningRun) {
         .join('');
       reasoningOutput.innerHTML = `
         <div><strong>Hybrid-Fluid · ${esc(payload.state)}</strong><br>${esc(payload.conclusion)}</div>
+        ${payload.assistant_response?.value ? `<div><strong>Përgjigjja e modelit · ${esc(payload.assistant_response.state)}</strong><br>${esc(payload.assistant_response.value)}<br><small>${esc(payload.assistant_response.metadata?.claim_status || '')}</small></div>` : ''}
         <div><strong>JONA-gated 11-stage trace</strong><ul>${stages}</ul></div>
         <div><strong>Real service outputs</strong><pre>${esc(JSON.stringify(serviceOutputs, null, 2))}</pre></div>`;
       return;

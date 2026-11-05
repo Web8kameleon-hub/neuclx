@@ -128,6 +128,33 @@ class ApiV1RouteTests(unittest.TestCase):
             app.close()
             thread.join(timeout=5)
 
+    def test_hybrid_fluid_attaches_model_answer_labeled_unverified(self):
+        server, app, port, thread = self._server_for()
+
+        class StubPipeline:
+            def run(self, task, facts):
+                return Datum({"ledger": None}, EvidenceState.COMPUTED, "stub", "stub", {"stages": []})
+
+        seen = {}
+
+        def converse(task, context=()):
+            seen["context"] = list(context)
+            return Datum("model text", EvidenceState.COMPUTED, "local:test", "stub", {})
+
+        app.hybrid_fluid = StubPipeline()
+        app.model_adapter.enabled = True
+        app.reasoning_engine.converse = converse
+        try:
+            payload = app.reason("Kush eshte Skenderbeu?", mode="hybrid-fluid")
+            answer = payload["assistant_response"]
+            self.assertEqual(answer["value"], "model text")
+            self.assertIn("not independently verified", answer["metadata"]["claim_status"])
+        finally:
+            server.shutdown()
+            server.server_close()
+            app.close()
+            thread.join(timeout=5)
+
     def test_reason_endpoint_includes_local_megalayer_metrics(self):
         upstream_payload = {
             "unique_signature": "local-sig",

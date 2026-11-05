@@ -236,7 +236,35 @@ class NeuCLXApplication:
             result = self.hybrid_fluid.run(task_text, fact_list)
             trace = result.metadata.get("stages", [])
             value = result.value if isinstance(result.value, dict) else {}
+            model_answer = None
+            if self.model_adapter.enabled and result.state is EvidenceState.COMPUTED:
+                signals = []
+                mega = value.get("megalayer")
+                if isinstance(mega, dict) and isinstance(mega.get("value"), dict):
+                    signals.append(
+                        "MegaLayer unique_signature=%s meta_level_name=%s"
+                        % (mega["value"].get("unique_signature"), mega["value"].get("meta_level_name"))
+                    )
+                alpha = value.get("alphabet_result")
+                if isinstance(alpha, dict) and isinstance(alpha.get("value"), dict):
+                    signals.append(
+                        "Alphabet total_complexity=%s (computed index)" % alpha["value"].get("total_complexity")
+                    )
+                generated = self.reasoning_engine.converse(task_text, [*fact_list, *signals])
+                model_answer = self.reasoning_engine.jona.release(
+                    Datum(
+                        generated.value,
+                        generated.state,
+                        generated.source,
+                        generated.method,
+                        {
+                            **generated.metadata,
+                            "claim_status": "Model-generated response; not independently verified.",
+                        },
+                    )
+                )
             return {
+                "assistant_response": model_answer.as_dict() if model_answer is not None else None,
                 "mode": "hybrid-fluid",
                 "task": task_text,
                 "intent": "hybrid-fluid-11-stage",
