@@ -26,6 +26,7 @@ from .learning import LearningStore
 from .hybrid_fluid import HybridFluidError, HybridFluidPipeline
 from .megalayer import MegaLayerAdapter, MegaLayerError
 from .web_evidence import MAX_URLS, PublicWebReadError, PublicWebReader
+from .self_learning import SelfLearning
 
 STATIC=Path(__file__).with_name("static")
 MIME={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8"}
@@ -48,6 +49,7 @@ class NeuCLXApplication:
             self.ledger,
         )
         self.web_reader = PublicWebReader(sandbox=self.reasoning_engine.jona)
+        self.self_learning = SelfLearning(self.learning, self.ledger, self.reasoning_engine.jona)
         self.stable_reasoning_engine = StableReasoningEngine(self.stable_memory, model_adapter=None)
         self.vision_encoder = VisionEncoder()
         self.creative_engine = CreativeEngine(self.ledger)
@@ -224,8 +226,6 @@ class NeuCLXApplication:
         if mode not in {"native", "hybrid-fluid"}:
             raise ValueError("mode must be 'native' or 'hybrid-fluid'")
         if mode == "hybrid-fluid":
-            if source_urls:
-                raise ValueError("source_urls are not supported in hybrid-fluid mode; no URLs were read")
             if not isinstance(facts, (list, tuple)):
                 raise TypeError("facts must be a list of strings")
             fact_list = [
@@ -233,11 +233,16 @@ class NeuCLXApplication:
                 for fact in (facts or [])
                 if isinstance(fact, str) and fact.strip()
             ]
+            web_hits, web_report = self._read_web_sources(task_text, source_urls)
+            learned_count = self.self_learning.learn_web_hits(web_hits)
             result = self.hybrid_fluid.run(task_text, fact_list)
             trace = result.metadata.get("stages", [])
             value = result.value if isinstance(result.value, dict) else {}
             model_answer = None
+            memory = None
             if self.model_adapter.enabled and result.state is EvidenceState.COMPUTED:
+                retrieved = self.learning.answer(task_text)
+                hits = [hit for hit in retrieved.metadata.get("evidence_chain", []) if hit.get("excerpt")]
                 signals = []
                 mega = value.get("megalayer")
                 if isinstance(mega, dict) and isinstance(mega.get("value"), dict):
@@ -250,19 +255,15 @@ class NeuCLXApplication:
                     signals.append(
                         "Alphabet total_complexity=%s (computed index)" % alpha["value"].get("total_complexity")
                     )
-                generated = self.reasoning_engine.converse(task_text, [*fact_list, *signals])
-                model_answer = self.reasoning_engine.jona.release(
-                    Datum(
-                        generated.value,
-                        generated.state,
-                        generated.source,
-                        generated.method,
-                        {
-                            **generated.metadata,
-                            "claim_status": "Model-generated response; not independently verified.",
-                        },
-                    )
-                )
+                context = [
+                    *fact_list,
+                    *(f"[{hit['source']} @ {hit['revision']}:{hit['line']}]\n{hit['excerpt']}" for hit in hits),
+                    *signals,
+                ]
+                generated = self.reasoning_engine.converse(task_text, context)
+                memory = self.self_learning.remember_answer(task_text, generated, hits)
+                model_answer = memory["answer"]
+                self.self_learning.record_use(hits)
             return {
                 "assistant_response": model_answer.as_dict() if model_answer is not None else None,
                 "mode": "hybrid-fluid",
@@ -299,6 +300,14 @@ class NeuCLXApplication:
                 "megalayer": value.get("megalayer"),
                 "fluid_engine": value.get("fluid_engine"),
                 "response": result.as_dict(),
+                "web_sources": web_report,
+                "learned_excerpts": learned_count,
+                "self_memory": (
+                    {"stone": memory["stone"]["number"], "stigma_frame": memory["stone"]["stigma_frame"], "grounding": memory["grounding"]}
+                    if memory is not None
+                    else None
+                ),
+                "knowledge_tiers": self.self_learning.tiers().as_dict(),
             }
         web_hits, web_report = self._read_web_sources(task_text, source_urls)
         megalayer = self.megalayer.analyze(task_text, self.reasoning_engine.jona).as_dict()

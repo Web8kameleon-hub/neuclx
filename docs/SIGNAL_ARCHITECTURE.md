@@ -141,8 +141,15 @@ $env:NEUCLX_FLUID_PIPELINE_NAME = '<installed-pipeline-name>'
 Non-loopback HTTP endpoints are rejected. The FluidEngine API documents the
 request fields `pipelineName` and `inputData`, but does not define a response
 schema; NeuCLX preserves its JSON response instead of claiming a normalized
-success result. The Hybrid-Fluid path rejects supplied `source_urls` rather
-than silently dropping them. The pre-existing API path remains selectable as
+success result. The Hybrid-Fluid path reads supplied `source_urls` through the
+JONA-gated public web reader. Cited excerpts are learned into the retrieval
+corpus (`self_learning.py`); model output is never ingested as a fact, only
+remembered as a Stigma Film frame via the journey ledger together with a
+computed grounding index (term overlap and literal source mentions, not a
+truth score). Documents are classified `bigdata` (>= 256 KiB), `seltendata`
+(<= 1 retrieval) or `standarddata` by a computed rule over stored size and
+retrieval hits; these tiers are NeuCLX definitions, not FluidEngine pipeline
+behavior. The pre-existing API path remains selectable as
 `native`; API callers that omit `mode` retain that behavior.
 
 `measured`: The inspected Clisonix alphabet service source at
