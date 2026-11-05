@@ -228,7 +228,7 @@ local or hosted-model fallback.
 
 | Repository | Path | Revision | Adaptation status |
 |---|---|---|---|
-| Web8kameleon-hub/clisonix.com | alphabet_layers_api.py; ocean-core/alphabet_layers.py | 3a7eb115a71f063dc0bb7b54664583a1c4a2b08c | computed; new stdlib client for health, stats, process and computed wave-index routes; upstream 61-layer mismatch is rejected |
+| Web8kameleon-hub/clisonix.com | alphabet_layers_api.py; ocean-core/alphabet_layers.py | 3a7eb115a71f063dc0bb7b54664583a1c4a2b08c | computed; new stdlib client for health, stats, process and computed wave-index routes; upstream 25 Greek + 36 Albanian = 61 contract is enforced |
 | Web8kameleon-hub/clisonix-evolution | ocean_core/api_mega_layer.py; ocean_core/mega_layer_engine.py | f120457ab2c38c5bac9d23b62fca5d4ea6f17a0e | computed; existing stdlib client is JONA-gated and permits configured HTTPS endpoints; response revision is identified as a contract reference, not a verified deployed revision |
 | Web8kameleon-hub/Lightning-SPP-3.14 | wwwmmm.FluidEngine/openapi.fluid.json | c673de4c8e51321520250c9539ef4535a196d919 | computed; new stdlib client sends the selected configured pipeline name and actual upstream results; response shape is preserved without an invented success schema |
 

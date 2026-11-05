@@ -46,14 +46,14 @@ def start_upstream(*, bad_alphabet=False):
                 self._send({
                     "status": "healthy",
                     "service": "alphabet-layers",
-                    "letters": 61 if bad_alphabet else 60,
+                    "letters": 60 if bad_alphabet else 61,
                     "layers": 61,
                 })
             elif path == "/api/v1/alphabet/stats":
                 self._send({
                     "total_layers": 63,
                     "base_layers": 61,
-                    "greek_letters": 25 if bad_alphabet else 24,
+                    "greek_letters": 24 if bad_alphabet else 25,
                     "albanian_letters": 36,
                     "meta_layer": True,
                 })
@@ -76,7 +76,7 @@ def start_upstream(*, bad_alphabet=False):
             received.append(("POST", path, body))
             if path == "/api/v1/alphabet/process":
                 self._send({
-                    "alphabet_size": 60,
+                    "alphabet_size": 61,
                     "active_layers": 61,
                     "total_complexity": 0.5,
                 })
@@ -146,7 +146,7 @@ def test_alphabet_contract_mismatch_stops_before_processing_other_engines():
     server, thread, received = start_upstream(bad_alphabet=True)
     try:
         pipeline = make_pipeline(server)
-        with pytest.raises(AlphabetContractError, match="greek_letters=25"):
+        with pytest.raises(AlphabetContractError, match="greek_letters=24"):
             pipeline.run("Kush je ti?")
     finally:
         server.shutdown()

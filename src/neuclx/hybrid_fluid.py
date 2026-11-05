@@ -146,12 +146,12 @@ class AlphabetLayerAdapter:
         expected_health = {
             "status": "healthy",
             "service": "alphabet-layers",
-            "letters": 60,
+            "letters": 61,
             "layers": 61,
         }
         expected_stats = {
             "base_layers": 61,
-            "greek_letters": 24,
+            "greek_letters": 25,
             "albanian_letters": 36,
             "meta_layer": True,
         }
@@ -187,9 +187,9 @@ class AlphabetLayerAdapter:
         )
         if not isinstance(result, dict):
             raise AlphabetContractError("Alphabet process response must be a JSON object")
-        if result.get("alphabet_size") != 60:
+        if result.get("alphabet_size") != 61:
             raise AlphabetContractError(
-                f"Alphabet process reported alphabet_size={result.get('alphabet_size')!r}; expected 60"
+                f"Alphabet process reported alphabet_size={result.get('alphabet_size')!r}; expected 61"
             )
         active_layers = result.get("active_layers")
         if type(active_layers) is not int or active_layers < 61:

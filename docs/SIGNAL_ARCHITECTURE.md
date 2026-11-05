@@ -147,12 +147,12 @@ than silently dropping them. The pre-existing API path remains selectable as
 
 `measured`: The inspected Clisonix alphabet service source at
 `Web8kameleon-hub/clisonix.com` revision
-`3a7eb115a71f063dc0bb7b54664583a1c4a2b08c` declares 24 Greek and 36 Albanian
-letters, but constructs its Greek list with an inclusive alpha-to-omega range
-that includes final sigma. Its health endpoint consequently reports 61 letters,
-while the intended 60 letters plus one meta-layer contract is 61 layers.
-NeuCLX checks the live health and statistics responses and stops on this
-mismatch; it does not pretend the service satisfies the 61-layer contract.
+`3a7eb115a71f063dc0bb7b54664583a1c4a2b08c` declares 25 Greek letters (alpha to
+omega inclusive, so final sigma is a distinct letter, as the project owner
+confirmed) and 36 Albanian letters: 61 base layers. Its health endpoint reports
+`letters=61`, and a live probe returned `alphabet_size=61` from the process
+route. NeuCLX checks the live health, statistics and process responses against
+this 25 + 36 = 61 contract and stops on any deviation.
 
 `computed`: Alphabet wave fields are preserved as values calculated by the
 remote service and explicitly labeled computed indices, not sensor readings,
