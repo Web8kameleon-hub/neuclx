@@ -23,7 +23,7 @@ MAX_URL_LENGTH = 2048
 MAX_RESPONSE_BYTES = 1_000_000
 MAX_EXCERPT_CHARACTERS = 600
 DEFAULT_TIMEOUT_SECONDS = 8
-_USER_AGENT = "NeuCLX/0.1 (public evidence retrieval)"
+_USER_AGENT = "NeuCLX/0.1 (https://github.com/Web8kameleon-hub/neuclx; public evidence retrieval)"
 _IGNORED_TAGS = {"script", "style", "noscript", "svg", "nav", "footer", "header"}
 
 
