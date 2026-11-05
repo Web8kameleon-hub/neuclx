@@ -160,10 +160,20 @@ physical frequencies, or evidence of consciousness. MegaLayer output and the
 FluidEngine response are likewise exposed as service results, not independently
 verified truths.
 
-`unavailable`: No live endpoints were configured or probed during this
-integration. Local fixture tests verify HTTP request shapes, JONA vetoes,
-stage ordering, and rejection of the currently inspected alphabet mismatch;
-they do not verify deployment health, runtime quality, or that a remote service
-matches the referenced source revision. Missing endpoint configuration returns
+`measured`: On 2026-11-05 one live run on a single Windows host started the
+three modules from their source repositories as loopback processes and
+`/api/v1/reason` with `mode=hybrid-fluid` completed all stages. Alphabet
+(`clisonix.com` `3a7eb115`, `alphabet_layers_api:app`) and MegaLayer
+(`clisonix-evolution` `ocean_core/api_mega_layer.py`) ran unmodified. The
+FluidEngine repository (`Lightning-SPP-3.14`) contains only the .NET library
+and an OpenAPI description, so a minimal local host exposing
+`POST /api/fluid/execute` for the library's `JsonDataStep` was used; that host
+is not part of the repository and `NEUCLX_FLUID_PIPELINE_NAME=JsonDataStep`.
+This one run verifies neither deployment health nor sustained quality.
+
+`unavailable`: Beyond that run, deployment health and runtime quality of the
+services are not verified, and the other FluidEngine pipelines are not hosted
+or tested. Local fixture tests verify HTTP request shapes, JONA vetoes, stage
+ordering, and rejection of contract mismatches. Missing endpoint configuration returns
 HTTP 503; service failures or contract mismatches return explicit HTTP 502
 errors. No fallback is attempted.
