@@ -49,6 +49,16 @@ class PublicWebReaderTests(unittest.TestCase):
         self.assertEqual(hit["digest_state"], "computed")
         self.assertLessEqual(len(hit["excerpt"]), MAX_EXCERPT_CHARACTERS)
 
+    def test_max_excerpts_returns_distinct_ranked_excerpts_sharing_one_digest(self):
+        datum = self.make_reader().read("Python standard library guide", "https://docs.example/python", 3)
+        chain = datum.metadata["evidence_chain"]
+        self.assertEqual(len(chain), 3)
+        self.assertEqual(len({hit["excerpt"] for hit in chain}), 3)
+        self.assertEqual(len(self.make_reader().read("Python standard library guide", "https://docs.example/python", 1).metadata["evidence_chain"]), 1)
+        self.assertEqual({hit["sha256"] for hit in chain}, {hashlib.sha256(self.body).hexdigest()})
+        with self.assertRaises(ValueError):
+            self.make_reader().read("python", "https://docs.example/python", 0)
+
     def test_rejects_non_https_and_embedded_credentials(self):
         reader = self.make_reader()
         for url in ("http://docs.example/python", "https://user:pass@docs.example/python"):

@@ -200,3 +200,20 @@ or tested. Local fixture tests verify HTTP request shapes, JONA vetoes, stage
 ordering, and rejection of contract mismatches. Missing endpoint configuration returns
 HTTP 503; service failures or contract mismatches return explicit HTTP 502
 errors. No fallback is attempted.
+
+## MegaLayer scale, measured 2026-11-05
+
+`measured`: `mega_layer_engine.py` (clisonix-evolution `1e37f37b`) defines
+`TOTAL_COMBINATIONS` as the product of its declared dimension sizes
+(7·26·61·12·24·16·8·64·128·256·5) = 4 291 445 422 817 280 ≈ 4.29×10^15. This is
+the size of the declared state space, not a count of reasoned-over facts and not
+a quality measure. In Albanian long-scale naming it is about 4.3 biliard; the
+figure 4.5 is not reproduced by the source.
+
+`measured`: direct `process_query` calls reported `combinations_used` of
+3.3×10^11 ("Kush ishte Skenderbeu?"), 8.6×10^11 ("guten morgen"),
+1.7×10^11 (an English question) and 1.3×10^10 ("2+2"), i.e. 3×10^-4 % to
+2×10^-2 % of the declared space, at 0.1-0.4 ms per call. `combinations_used`
+is computed from the current value of each layer, not from enumerating states.
+A larger state space does not by itself make answers more correct; answer
+quality is measured separately by the benchmarks.

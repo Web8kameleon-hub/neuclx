@@ -84,7 +84,7 @@ class LearningTests(unittest.TestCase):
 
         app = NeuCLXApplication(Path(self.tmp.name) / 'web-journey.sqlite3')
         excerpt = 'Python standard library documentation explains safe text parsing.'
-        app.web_reader.read = lambda query, url: Datum(
+        app.web_reader.read = lambda query, url, count=1: Datum(
             f'[{url}]\n{excerpt}',
             EvidenceState.DECLARED,
             source=url,

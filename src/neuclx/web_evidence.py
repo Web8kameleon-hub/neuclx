@@ -22,6 +22,7 @@ MAX_URLS = 10
 MAX_URL_LENGTH = 2048
 MAX_RESPONSE_BYTES = 1_000_000
 MAX_EXCERPT_CHARACTERS = 600
+MAX_EXCERPTS = 8
 DEFAULT_TIMEOUT_SECONDS = 8
 _USER_AGENT = "NeuCLX/0.1 (https://github.com/Web8kameleon-hub/neuclx; public evidence retrieval)"
 _IGNORED_TAGS = {"script", "style", "noscript", "svg", "nav", "footer", "header"}
@@ -76,9 +77,11 @@ class PublicWebReader:
         self.resolver = resolver if resolver is not None else socket.getaddrinfo
         self.transport = transport if transport is not None else self._request
 
-    def read(self, query: str, url: str) -> Datum:
+    def read(self, query: str, url: str, max_excerpts: int = 1) -> Datum:
         if not isinstance(query, str) or not query.strip():
             raise ValueError("query is required")
+        if not 1 <= max_excerpts <= MAX_EXCERPTS:
+            raise ValueError(f"max_excerpts must be between 1 and {MAX_EXCERPTS}")
         parsed, resolver_host = self._validate_url(url)
         request_datum = Datum(
             url,
@@ -101,8 +104,8 @@ class PublicWebReader:
             text = self._extract(body, content_type)
         except (UnicodeError, json.JSONDecodeError) as exc:
             raise PublicWebReadError("source body is not valid supported text") from exc
-        excerpt = self._select_excerpt(query, text)
-        if not excerpt:
+        excerpts = self._select_excerpts(query, text, max_excerpts)
+        if not excerpts:
             raise PublicWebReadError("no query-matching text was found on the page")
 
         digest = sha256(body).hexdigest()
@@ -112,24 +115,28 @@ class PublicWebReader:
             "text/plain": "https-get:plain-text-excerpt",
             "application/json": "https-get:json-excerpt",
         }[content_type]
-        entry = {
-            "source": url,
-            "revision": "sha256:" + digest,
-            "sha256": digest,
-            "excerpt": excerpt,
-            "state": EvidenceState.DECLARED.value,
-            "method": retrieval_method,
-            "retrieved_at": datetime.now(UTC).isoformat(),
-            "retrieved_at_state": EvidenceState.MEASURED.value,
-            "digest_state": EvidenceState.COMPUTED.value,
-        }
+        retrieved_at = datetime.now(UTC).isoformat()
+        chain = [
+            {
+                "source": url,
+                "revision": "sha256:" + digest,
+                "sha256": digest,
+                "excerpt": excerpt,
+                "state": EvidenceState.DECLARED.value,
+                "method": retrieval_method,
+                "retrieved_at": retrieved_at,
+                "retrieved_at_state": EvidenceState.MEASURED.value,
+                "digest_state": EvidenceState.COMPUTED.value,
+            }
+            for excerpt in excerpts
+        ]
         result = Datum(
-            f"[{url}]\n{excerpt}",
+            "\n\n".join(f"[{url}]\n{excerpt}" for excerpt in excerpts),
             EvidenceState.DECLARED,
             source=url,
             method="public-web:cited-excerpt",
             metadata={
-                "evidence_chain": [entry],
+                "evidence_chain": chain,
                 "jona_decision": self.sandbox.evaluate(request_datum).value,
                 "claim_status": "Source text is declared, not independently verified.",
             },
@@ -232,9 +239,14 @@ class PublicWebReader:
 
     @staticmethod
     def _select_excerpt(query, text):
+        found = PublicWebReader._select_excerpts(query, text, 1)
+        return found[0] if found else ""
+
+    @staticmethod
+    def _select_excerpts(query, text, count):
         wanted = terms(query)
         if not wanted:
-            return ""
+            return []
         candidates = []
         for index, sentence in enumerate(re.split(r"(?<=[.!?])\s+|\n+", text)):
             sentence = " ".join(sentence.split())
@@ -244,10 +256,15 @@ class PublicWebReader:
             if overlap:
                 excerpt = sentence[:MAX_EXCERPT_CHARACTERS].rstrip()
                 candidates.append((len(overlap) / len(wanted), len(overlap), index, excerpt))
-        if not candidates:
-            return ""
         candidates.sort(key=lambda item: (-item[0], -item[1], item[2]))
-        return candidates[0][3]
+        chosen, seen = [], set()
+        for _, _, _, excerpt in candidates:
+            if excerpt not in seen:
+                seen.add(excerpt)
+                chosen.append(excerpt)
+            if len(chosen) == count:
+                break
+        return chosen
 
 
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):

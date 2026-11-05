@@ -29,6 +29,8 @@ from .web_evidence import MAX_URLS, PublicWebReadError, PublicWebReader
 from .self_learning import SelfLearning
 from .cited_answer import CITATION_INSTRUCTION, enforce, numbered_context, refusal
 
+HYBRID_EXCERPTS = 5
+
 STATIC=Path(__file__).with_name("static")
 MIME={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8"}
 
@@ -134,7 +136,7 @@ class NeuCLXApplication:
             "answer": agent.answer(question),
         }
 
-    def _read_web_sources(self, query: str, source_urls=()):
+    def _read_web_sources(self, query: str, source_urls=(), max_excerpts: int = 1):
         if source_urls is None:
             source_urls = []
         if not isinstance(source_urls, list):
@@ -147,7 +149,7 @@ class NeuCLXApplication:
             if not isinstance(url, str) or not url.strip():
                 raise ValueError("source URLs must be non-empty strings")
             try:
-                datum = self.web_reader.read(query, url.strip())
+                datum = self.web_reader.read(query, url.strip(), max_excerpts)
             except PublicWebReadError as exc:
                 report.append({"source": url, "state": EvidenceState.UNAVAILABLE.value, "reason": str(exc)})
                 continue
@@ -234,7 +236,7 @@ class NeuCLXApplication:
                 for fact in (facts or [])
                 if isinstance(fact, str) and fact.strip()
             ]
-            web_hits, web_report = self._read_web_sources(task_text, source_urls)
+            web_hits, web_report = self._read_web_sources(task_text, source_urls, HYBRID_EXCERPTS)
             learned_count = self.self_learning.learn_web_hits(web_hits)
             result = self.hybrid_fluid.run(task_text, fact_list)
             trace = result.metadata.get("stages", [])
@@ -242,7 +244,7 @@ class NeuCLXApplication:
             model_answer = None
             memory = None
             if self.model_adapter.enabled and result.state is EvidenceState.COMPUTED:
-                retrieved = self.learning.answer(task_text)
+                retrieved = self.learning.answer(task_text, limit=HYBRID_EXCERPTS)
                 hits = [hit for hit in retrieved.metadata.get("evidence_chain", []) if hit.get("excerpt")]
                 signals = []
                 mega = value.get("megalayer")

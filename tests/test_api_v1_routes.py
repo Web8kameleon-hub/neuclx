@@ -287,7 +287,7 @@ class ApiV1RouteTests(unittest.TestCase):
         server, app, port, thread = self._server_for()
         url = "https://docs.example/python"
         excerpt = "Python standard library text parsing."
-        app.web_reader.read = lambda query, source: Datum(
+        app.web_reader.read = lambda query, source, count=1: Datum(
             f"[{source}]\n{excerpt}",
             EvidenceState.DECLARED,
             source=source,

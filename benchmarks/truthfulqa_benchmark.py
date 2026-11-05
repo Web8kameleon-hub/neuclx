@@ -79,16 +79,37 @@ def ask(base_url, question, source, timeout):
     return payload, error, round((time.perf_counter() - start) * 1000, 1)
 
 
-def run(csv_path, base_url, limit, timeout, dataset_revision):
+def ask_baseline(endpoint, model, question, timeout):
+    """Bare model, no sources, no NeuCLX layers: the comparison baseline."""
+    body = json.dumps(
+        {"model": model, "temperature": 0, "max_tokens": 256, "messages": [{"role": "user", "content": question}]}
+    ).encode("utf-8")
+    req = request.Request(endpoint, data=body, headers={"Content-Type": "application/json"}, method="POST")
+    start = time.perf_counter()
+    try:
+        with request.urlopen(req, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        text, error = payload["choices"][0]["message"]["content"], None
+    except (URLError, OSError, ValueError, KeyError, IndexError) as exc:
+        text, error = None, str(exc)
+    return text, error, round((time.perf_counter() - start) * 1000, 1)
+
+
+def run(csv_path, base_url, limit, timeout, dataset_revision, baseline=None):
     data = Path(csv_path).read_bytes()
     all_rows, rows = select_rows(csv_path, limit)
     results = []
     for index, row in enumerate(rows):
-        payload, error, latency = ask(base_url, row["Question"], row["Source"], timeout)
-        assistant = payload.get("assistant_response") or {}
-        web = payload.get("web_sources") or []
-        source_state = web[0].get("state") if web and isinstance(web, list) else None
-        text = assistant.get("value")
+        if baseline:
+            text, error, latency = ask_baseline(baseline["endpoint"], baseline["model"], row["Question"], timeout)
+            payload, assistant, web = {}, {}, []
+            source_state = None
+        else:
+            payload, error, latency = ask(base_url, row["Question"], row["Source"], timeout)
+            assistant = payload.get("assistant_response") or {}
+            web = payload.get("web_sources") or []
+            source_state = web[0].get("state") if web and isinstance(web, list) else None
+            text = assistant.get("value")
         results.append(
             {
                 "index": index,
@@ -112,6 +133,7 @@ def run(csv_path, base_url, limit, timeout, dataset_revision):
     return {
         "state": "measured",
         "benchmark": "TruthfulQA (proxy scoring, not the official metric)",
+        "system": f"bare-model baseline {baseline['model']}" if baseline else "neuclx hybrid-fluid",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "neuclx_commit": commit,
         "dataset": {
@@ -143,9 +165,14 @@ def main(argv=None):
     parser.add_argument("--limit", type=int, default=25)
     parser.add_argument("--timeout", type=float, default=170)
     parser.add_argument("--dataset-revision", required=True, help="git commit of the downloaded dataset")
+    parser.add_argument("--baseline-model", help="query this model directly (no NeuCLX) instead of NeuCLX")
+    parser.add_argument("--baseline-endpoint", default="http://127.0.0.1:11434/v1/chat/completions")
     parser.add_argument("--output", required=True)
     args = parser.parse_args(argv)
-    report = run(args.csv, args.base_url, args.limit, args.timeout, args.dataset_revision)
+    baseline = (
+        {"model": args.baseline_model, "endpoint": args.baseline_endpoint} if args.baseline_model else None
+    )
+    report = run(args.csv, args.base_url, args.limit, args.timeout, args.dataset_revision, baseline)
     Path(args.output).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(report["summary"], ensure_ascii=False))
 
