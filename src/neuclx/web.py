@@ -27,6 +27,7 @@ from .hybrid_fluid import HybridFluidError, HybridFluidPipeline
 from .megalayer import MegaLayerAdapter, MegaLayerError
 from .web_evidence import MAX_URLS, PublicWebReadError, PublicWebReader
 from .self_learning import SelfLearning
+from .cited_answer import CITATION_INSTRUCTION, enforce, numbered_context, refusal
 
 STATIC=Path(__file__).with_name("static")
 MIME={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8"}
@@ -257,10 +258,16 @@ class NeuCLXApplication:
                     )
                 context = [
                     *fact_list,
-                    *(f"[{hit['source']} @ {hit['revision']}:{hit['line']}]\n{hit['excerpt']}" for hit in hits),
+                    *numbered_context(hits),
                     *signals,
                 ]
-                generated = self.reasoning_engine.converse(task_text, context)
+                if hits:
+                    raw = self.reasoning_engine.converse(task_text, context, CITATION_INSTRUCTION)
+                    generated = enforce(str(raw.value or ""), hits)
+                    generated.metadata["model"] = raw.source
+                    generated.metadata["raw_output_sha256"] = sha256(str(raw.value or "").encode("utf-8")).hexdigest()
+                else:
+                    generated = refusal("no retrieved source")
                 facets = {
                     "mode": "hybrid-fluid",
                     "model": str(generated.source),

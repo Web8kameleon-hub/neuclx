@@ -137,18 +137,56 @@ class ApiV1RouteTests(unittest.TestCase):
 
         seen = {}
 
-        def converse(task, context=()):
+        def converse(task, context=(), instructions=""):
             seen["context"] = list(context)
-            return Datum("model text", EvidenceState.COMPUTED, "local:test", "stub", {})
+            seen["instructions"] = instructions
+            return Datum(
+                "Skenderbeu udhehoqi rezistencen shqiptare kunder osmaneve [1]. Ai ishte gjithashtu astronaut [1].",
+                EvidenceState.COMPUTED,
+                "local:test",
+                "stub",
+                {},
+            )
+
+        app.hybrid_fluid = StubPipeline()
+        app.model_adapter.enabled = True
+        app.reasoning_engine.converse = converse
+        app.learning.ingest(
+            "https://example.org/skenderbeu#p:e", "sha256:" + "ab" * 32,
+            "Skenderbeu udhehoqi rezistencen shqiptare kunder osmaneve.",
+        )
+        try:
+            payload = app.reason("Kush eshte Skenderbeu rezistencen osmaneve?", mode="hybrid-fluid")
+            answer = payload["assistant_response"]
+            self.assertTrue(seen["context"][0].startswith("[1] https://example.org/skenderbeu"))
+            self.assertIn("Answer ONLY", seen["instructions"])
+            self.assertEqual(answer["value"], "Skenderbeu udhehoqi rezistencen shqiptare kunder osmaneve [1].")
+            self.assertEqual(len(answer["metadata"]["refused_sentences"]), 1)
+            self.assertIn("declared, not verified", answer["metadata"]["claim_status"])
+        finally:
+            server.shutdown()
+            server.server_close()
+            app.close()
+            thread.join(timeout=5)
+
+    def test_hybrid_fluid_refuses_without_source_and_skips_model(self):
+        server, app, port, thread = self._server_for()
+
+        class StubPipeline:
+            def run(self, task, facts):
+                return Datum({"ledger": None}, EvidenceState.COMPUTED, "stub", "stub", {"stages": []})
+
+        def converse(*_args, **_kwargs):
+            raise AssertionError("model must not be called without a source")
 
         app.hybrid_fluid = StubPipeline()
         app.model_adapter.enabled = True
         app.reasoning_engine.converse = converse
         try:
-            payload = app.reason("Kush eshte Skenderbeu?", mode="hybrid-fluid")
+            payload = app.reason("Pyetje pa asnje burim", mode="hybrid-fluid")
             answer = payload["assistant_response"]
-            self.assertEqual(answer["value"], "model text")
-            self.assertIn("not independently verified", answer["metadata"]["claim_status"])
+            self.assertEqual(answer["state"], "unavailable")
+            self.assertEqual(answer["metadata"]["reason"], "no retrieved source")
         finally:
             server.shutdown()
             server.server_close()

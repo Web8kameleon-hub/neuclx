@@ -110,7 +110,9 @@ class SelfLearning:
     def remember_answer(self, question: str, answer: Datum, hits, facets: dict | None = None) -> dict:
         grounding = self.grounding(str(answer.value or ""), hits)
         claim = (
-            "Model-generated response; sources were supplied as context but are declared, not verified."
+            "Refused by citation enforcement; no unsourced claim was released."
+            if answer.state is EvidenceState.UNAVAILABLE
+            else "Model-generated response; sources were supplied as context but are declared, not verified."
             if grounding["grounded"]
             else "Model-generated response; no retrieved source supports it and it is not independently verified."
         )

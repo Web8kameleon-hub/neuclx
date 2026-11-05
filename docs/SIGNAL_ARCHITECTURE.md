@@ -149,7 +149,11 @@ computed grounding index (term overlap and literal source mentions, not a
 truth score). Documents are classified `bigdata` (>= 256 KiB), `seltendata`
 (<= 1 retrieval) or `standarddata` by a computed rule over stored size and
 retrieval hits; these tiers are NeuCLX definitions, not FluidEngine pipeline
-behavior. `newdata` is a quarantined fourth class: the first occurrence of a
+behavior. Hybrid-Fluid answers are source-bound (`cited_answer.py`): the model
+sees only numbered retrieved excerpts, must cite `[n]`, and each sentence is
+kept only if it cites a valid source and passes a computed term-overlap check
+(>= 0.3); otherwise it is refused, and with no retrieved source the model is
+not called at all. This filter is not a truth proof. `newdata` is a quarantined fourth class: the first occurrence of a
 normalized-answer signature or of a facet combination (mode, model, source
 hosts) is counted as computed novelty. It is not validity or creativity, and it
 never enters the retrieval corpus. The pre-existing API path remains selectable as
