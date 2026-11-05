@@ -12,3 +12,7 @@ NeuCLX may claim superiority over another system only when a checked-in report c
 
 Until then, “more advanced than GPT, Gemini, DeepSeek, or Perplexity” has state `declared`, not `measured`.
 
+
+## Recorded runs
+
+- `benchmarks/results/truthfulqa-proxy-25.json` (`measured`, development only): 25 TruthfulQA rows with their own source URL, proxy scoring, one run, no competitor baseline. It cannot support any ranking claim under this contract.

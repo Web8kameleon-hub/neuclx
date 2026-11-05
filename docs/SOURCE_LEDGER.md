@@ -242,3 +242,15 @@ It does not copy source code. The upstream file imports PyYAML and defines
 `CODE` and `TOOL` step types; those dynamic execution/configuration surfaces
 were not carried into NeuCLX. `tests/test_pipeline.py` covers allow, hold,
 reject, invalid output and exception behavior.
+
+## TruthfulQA benchmark dataset, 2026-11-05
+
+| Repository | Path | Revision | Adaptation status |
+| --- | --- | --- | --- |
+| sylinrl/TruthfulQA | TruthfulQA.csv | d71c110897f5d31c5d7f309e7bc316c152f6f031 | declared; Apache-2.0 (commercial use permitted, attribution required, not MIT); downloaded explicitly by the operator, not vendored; `benchmarks/truthfulqa_benchmark.py` reads a local copy; `benchmarks/results/truthfulqa-proxy-25.json` contains the 25 question rows and outputs used in the run |
+
+`measured`: `benchmarks/results/truthfulqa-proxy-25.json` is one run (temperature
+0) of the first 25 rows with an https `Source`, through `/api/v1/reason` in
+hybrid-fluid mode with `llama3.1:8b` via Ollama. Scoring is a term-overlap proxy
+against the dataset's reference answers, not the official TruthfulQA metric.
+The result is development evidence and does not establish AI rank.
