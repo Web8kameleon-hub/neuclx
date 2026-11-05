@@ -4,7 +4,7 @@ import unittest
 import json
 from hashlib import sha256
 
-from neuclx.evidence import EvidenceState
+from neuclx.evidence import Datum, EvidenceState
 from neuclx.jona import PolicyDecision
 from neuclx.learning import LearningStore, ingest_project
 
@@ -76,6 +76,36 @@ class LearningTests(unittest.TestCase):
             self.assertIn('repo/jona.md', response['value'])
             self.assertEqual(app.reason('JONA')['state'], 'declared')
             self.assertFalse(app.model_adapter.enabled)
+        finally:
+            app.close()
+
+    def test_web_respond_records_short_source_evidence(self):
+        from neuclx.web import NeuCLXApplication
+
+        app = NeuCLXApplication(Path(self.tmp.name) / 'web-journey.sqlite3')
+        excerpt = 'Python standard library documentation explains safe text parsing.'
+        app.web_reader.read = lambda query, url: Datum(
+            f'[{url}]\n{excerpt}',
+            EvidenceState.DECLARED,
+            source=url,
+            method='public-web:cited-excerpt',
+            metadata={'evidence_chain': [{
+                'source': url,
+                'revision': 'sha256:abc',
+                'sha256': 'abc',
+                'excerpt': excerpt,
+                'state': 'declared',
+            }]},
+        )
+        try:
+            response = app.respond(
+                'Python text parsing',
+                source_urls=['https://docs.example/python'],
+            )['response']
+            self.assertEqual(response['state'], 'declared')
+            self.assertIn('text parsing', response['value'])
+            self.assertEqual(response['metadata']['evidence_chain'][0]['source'], 'https://docs.example/python')
+            self.assertEqual(response['metadata']['web_sources'][0]['state'], 'declared')
         finally:
             app.close()
 

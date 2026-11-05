@@ -23,6 +23,8 @@ from .stable_reasoning_engine import StableReasoningEngine
 from .vision_encoder import VisionEncoder
 from .creative_engine import CreativeEngine
 from .learning import LearningStore
+from .megalayer import MegaLayerAdapter, MegaLayerError
+from .web_evidence import MAX_URLS, PublicWebReadError, PublicWebReader
 
 STATIC=Path(__file__).with_name("static")
 MIME={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8"}
@@ -39,6 +41,8 @@ class NeuCLXApplication:
         self.stable_memory = EvidenceMemory(stable_memory_path)
         self.model_adapter = ModelAdapter(provider="local", model_name="neuclx-core", enabled=False)
         self.reasoning_engine = ReasoningEngine(memory=self.memory, model=self.model_adapter)
+        self.megalayer = MegaLayerAdapter.from_environment()
+        self.web_reader = PublicWebReader(sandbox=self.reasoning_engine.jona)
         self.stable_reasoning_engine = StableReasoningEngine(self.stable_memory, model_adapter=None)
         self.vision_encoder = VisionEncoder()
         self.creative_engine = CreativeEngine(self.ledger)
@@ -122,18 +126,67 @@ class NeuCLXApplication:
             "answer": agent.answer(question),
         }
 
-    def respond(self,prompt,facts=()):
+    def _read_web_sources(self, query: str, source_urls=()):
+        if source_urls is None:
+            source_urls = []
+        if not isinstance(source_urls, list):
+            raise TypeError("source_urls must be a list")
+        if len(source_urls) > MAX_URLS:
+            raise ValueError(f"at most {MAX_URLS} source URLs are allowed per request")
+        hits = []
+        report = []
+        for url in source_urls:
+            if not isinstance(url, str) or not url.strip():
+                raise ValueError("source URLs must be non-empty strings")
+            try:
+                datum = self.web_reader.read(query, url.strip())
+            except PublicWebReadError as exc:
+                report.append({"source": url, "state": EvidenceState.UNAVAILABLE.value, "reason": str(exc)})
+                continue
+            hits.extend(datum.metadata.get("evidence_chain", []))
+            report.append({"source": url, "state": datum.state.value, "method": datum.method})
+        return hits, report
+
+    def _attach_web_evidence(self, answer: Datum, hits, report):
+        metadata = {**answer.metadata, "web_sources": report}
+        if not hits:
+            result = Datum(answer.value, answer.state, answer.source, answer.method, metadata)
+            return self.reasoning_engine.jona.release(result)
+        evidence_chain = [*metadata.get("evidence_chain", []), *hits]
+        excerpts = [
+            f"[{hit['source']}]\n{hit['excerpt']}"
+            for hit in evidence_chain
+            if hit.get("excerpt")
+        ]
+        result = Datum(
+            "\n\n".join(excerpts),
+            EvidenceState.DECLARED,
+            source="neuclx:evidence-chain",
+            method="local-and-public-web-excerpts",
+            metadata={
+                **metadata,
+                "evidence_chain": evidence_chain,
+                "jona_decision": "sandbox_only",
+                "claim_status": "Source excerpts are declared and are not independently verified.",
+            },
+        )
+        return self.reasoning_engine.jona.release(result)
+
+    def respond(self, prompt, facts=(), source_urls=None):
         for fact in facts:
             if isinstance(fact,str) and fact.strip():
                 digest = sha256(fact.encode('utf-8')).hexdigest()
                 self.learning.ingest('chat:user-declared:' + digest, 'sha256:' + digest, fact)
-        answer = self.learning.answer(prompt)
+        hits, web_report = self._read_web_sources(prompt, source_urls)
+        answer = self._attach_web_evidence(self.learning.answer(prompt), hits, web_report)
         return self.ledger.record(prompt, answer)
 
-    def reason(self, task: str, facts=(), *, max_iterations: int = 5):
+    def reason(self, task: str, facts=(), *, source_urls=None, max_iterations: int = 5):
         task_text = (task or "").strip()
         if not task_text:
             raise ValueError("task is required")
+        web_hits, web_report = self._read_web_sources(task_text, source_urls)
+        megalayer = self.megalayer.analyze(task_text, self.reasoning_engine.jona).as_dict()
         fact_list = [str(fact).strip() for fact in (facts or []) if isinstance(fact, str) and str(fact).strip()]
         if not fact_list:
             from .simple_logic_engine import SimpleLogicEngine
@@ -144,8 +197,14 @@ class NeuCLXApplication:
                     EvidenceState.COMPUTED,
                     source="simple_logic_engine",
                     method="symbolic:detect_and_solve",
-                    metadata={"confidence": simple_confidence, "intent": "arithmetic.word_problem"},
+                    metadata={
+                        "confidence": simple_confidence,
+                        "intent": "arithmetic.word_problem",
+                        "evidence_chain": web_hits,
+                        "web_sources": web_report,
+                    },
                 )
+                computed = self.reasoning_engine.jona.release(computed)
                 stored = self.ledger.record(task_text, computed)
                 return {
                     'task': task_text,
@@ -159,25 +218,35 @@ class NeuCLXApplication:
                     'trace': {'steps': [{'reasoning_type': 'symbolic', 'status': 'success', 'hypothesis': simple_answer}]},
                     'status': 'ok',
                     'ledger': stored,
+                    'megalayer': megalayer,
+                    'evidence_chain': web_hits,
+                    'web_sources': web_report,
                 }
-            evidence = self.learning.answer(task_text)
+            evidence = self._attach_web_evidence(self.learning.answer(task_text), web_hits, web_report)
             stored = self.ledger.record(task_text, evidence)
             return {'task': task_text, 'intent': 'document-retrieval', 'state': evidence.state.value,
                     'conclusion': evidence.value or 'Nuk ka evidencë të disponueshme për këtë pyetje.',
-                    'confidence': None, 'confidence_state': 'unavailable',
+                    'confidence': None, 'confidence_state': evidence.state.value,
                     'evidence_path': [hit['source'] for hit in evidence.metadata.get('evidence_chain', [])],
                     'evidence_chain': evidence.metadata.get('evidence_chain', []),
-                    'trace': {'steps': []}, 'status': 'ok', 'ledger': stored}
+                    'trace': {'steps': []}, 'status': 'ok', 'ledger': stored,
+                    'megalayer': megalayer, 'web_sources': web_report}
         result = self.reasoning_engine.reason(task_text, fact_list, max_iterations=max_iterations)
+        conclusion = self.reasoning_engine.jona.release(Datum(
+            result["conclusion"],
+            EvidenceState.COMPUTED if result["status"] == "ok" else EvidenceState.UNAVAILABLE,
+            source="reasoning_engine",
+            method="reasoning:api",
+            metadata={
+                "intent": result["intent"],
+                "confidence": result["confidence"],
+                "evidence_chain": web_hits,
+                "web_sources": web_report,
+            },
+        ))
         stored = self.ledger.record(
             task_text,
-            Datum(
-                result["conclusion"],
-                EvidenceState.COMPUTED,
-                source="reasoning_engine",
-                method="reasoning:api",
-                metadata={"intent": result["intent"], "confidence": result["confidence"]},
-            ),
+            conclusion,
         )
         return {
             "task": task_text,
@@ -192,6 +261,9 @@ class NeuCLXApplication:
             "trace": result["trace"],
             "status": result["status"],
             "ledger": stored,
+            "megalayer": megalayer,
+            "evidence_chain": web_hits,
+            "web_sources": web_report,
         }
 
     def inspect_vision(self, image_path: str | None = None, image_bytes_b64: str | None = None, *, author: str | None = None, task: str | None = None):
@@ -239,20 +311,29 @@ def handler_factory(app):
         def _handle_respond_request(self, payload):
             prompt = payload.get("prompt", "")
             facts = payload.get("facts", [])
+            source_urls = payload.get("source_urls", [])
             if not isinstance(prompt, str) or not prompt.strip():
                 raise ValueError("prompt is required")
             if not isinstance(facts, list):
                 raise TypeError("facts must be a list")
-            return app.respond(prompt.strip(), facts)
+            if not isinstance(source_urls, list):
+                raise TypeError("source_urls must be a list")
+            try:
+                return app.respond(prompt.strip(), facts, source_urls)
+            except PermissionError as exc:
+                raise PermissionError(f"JONA rejected web source: {exc}") from exc
 
         def _handle_reason_request(self, payload):
             task = payload.get("task", payload.get("prompt", payload.get("question", "")))
             facts = payload.get("facts", payload.get("context", []))
+            source_urls = payload.get("source_urls", [])
             if not isinstance(task, str) or not task.strip():
                 raise ValueError("task is required")
             if not isinstance(facts, list):
                 facts = [str(facts)] if facts else []
-            return app.reason(task.strip(), facts)
+            if not isinstance(source_urls, list):
+                raise TypeError("source_urls must be a list")
+            return app.reason(task.strip(), facts, source_urls=source_urls)
 
         def _handle_stable_reason_request(self, payload):
             task = payload.get("task", payload.get("prompt", payload.get("question", "")))
@@ -306,6 +387,8 @@ def handler_factory(app):
                 try:
                     data = self._parse_json_body()
                     self._json(self._handle_respond_request(data))
+                except PermissionError as exc:
+                    self._json({"error": "jona_rejected", "detail": str(exc)}, HTTPStatus.FORBIDDEN)
                 except (ValueError, json.JSONDecodeError) as exc:
                     self._json({"error": "invalid_request", "detail": str(exc)}, HTTPStatus.BAD_REQUEST)
                 return
@@ -313,6 +396,10 @@ def handler_factory(app):
                 try:
                     data = self._parse_json_body()
                     self._json(self._handle_reason_request(data))
+                except MegaLayerError as exc:
+                    self._json({"error": "megalayer_unavailable", "detail": str(exc)}, HTTPStatus.BAD_GATEWAY)
+                except PermissionError as exc:
+                    self._json({"error": "jona_rejected", "detail": str(exc)}, HTTPStatus.FORBIDDEN)
                 except (ValueError, json.JSONDecodeError) as exc:
                     self._json({"error": "invalid_request", "detail": str(exc)}, HTTPStatus.BAD_REQUEST)
                 return
@@ -373,6 +460,10 @@ def handler_factory(app):
                 try:
                     context = [fact.strip() for fact in facts.split("|") if fact.strip()]
                     return self._json(app.reason(task, context))
+                except MegaLayerError as exc:
+                    return self._json({"error": "megalayer_unavailable", "detail": str(exc)}, HTTPStatus.BAD_GATEWAY)
+                except PermissionError as exc:
+                    return self._json({"error": "jona_rejected", "detail": str(exc)}, HTTPStatus.FORBIDDEN)
                 except ValueError as exc:
                     return self._json({"error": "invalid_request", "detail": str(exc)}, HTTPStatus.BAD_REQUEST)
             if parsed.path in {"/api/stable-reason", "/api/v1/stable-reason"}:
@@ -398,4 +489,3 @@ def main(argv=None):
     server=ThreadingHTTPServer((args.host,args.port),handler_factory(NeuCLXApplication(args.ledger))); print(f"NeuCLX: http://{args.host}:{args.port}"); server.serve_forever()
 
 if __name__=="__main__": main()
-

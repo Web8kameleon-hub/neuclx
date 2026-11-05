@@ -20,7 +20,7 @@
   </div>
   <div id="reasoning-output" class="reasoning-output" aria-live="polite">Pritet një pyetje e vërtetë për të filluar arsyetimin.</div>
 </section>
-<section id="journey" class="journey" aria-live="polite"></section><form id="chat"><label for="prompt">Hapi i ardhshëm</label><div class="composer"><textarea id="prompt" rows="2" placeholder="Pyet, ndërto, zbulo…" required></textarea><button type="submit">→</button></div><div class="fact"><input id="fact" placeholder="Fakt opsional"><span>Stigma Film · Provenance · No artificial fill</span></div></form></main><script>
+<section id="journey" class="journey" aria-live="polite"></section><form id="chat"><label for="prompt">Hapi i ardhshëm</label><div class="composer"><textarea id="prompt" rows="2" placeholder="Pyet, ndërto, zbulo…" required></textarea><button type="submit">→</button></div><div class="fact"><input id="fact" placeholder="Fakt opsional"><span>Stigma Film · Provenance · No artificial fill</span></div><label for="source-urls">Burime publike HTTPS (një URL për rresht, opsionale)</label><textarea id="source-urls" rows="2" placeholder="https://www.clisonix.com/modules/web-reader"></textarea><small>Lexohen vetëm faqet publike të dhëna; tekst i shkurtër i cituar, jo trajnim i modelit.</small></form></main><script>
 const reasoningTask=document.querySelector('#reasoning-task');
 const reasoningContext=document.querySelector('#reasoning-context');
 const reasoningRun=document.querySelector('#reasoning-run');
@@ -61,4 +61,3 @@ reasoningRun.addEventListener('click', async () => {
   `;
 });
 </script><script src="/app.js" defer></script></body></html>
-

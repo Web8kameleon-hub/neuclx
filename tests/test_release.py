@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import zipfile
 from scripts.build_release import build
 
 class ReleaseTests(unittest.TestCase):
@@ -12,6 +13,10 @@ class ReleaseTests(unittest.TestCase):
             self.assertIn("neuclx-0.1.0-py3-none-any.whl",files)
             self.assertIn("neuclx-0.1.0.tar.gz",files)
             self.assertIn("SHA256SUMS",files)
+            with zipfile.ZipFile(Path(directory) / "neuclx-0.1.0-py3-none-any.whl") as wheel:
+                self.assertIn("neuclx/data/__init__.py", wheel.namelist())
+                self.assertIn("neuclx/data/normalize.py", wheel.namelist())
+                self.assertIn("neuclx/data/validate.py", wheel.namelist())
             manifest=json.loads((Path(directory)/"neuclx-0.1.0.release-manifest.json").read_text())
             self.assertEqual(manifest["claims"]["benchmark_status"],"not_measured")
 

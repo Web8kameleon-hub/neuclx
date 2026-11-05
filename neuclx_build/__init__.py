@@ -18,8 +18,9 @@ def _wheel_name():
 def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
     target = Path(wheel_directory) / _wheel_name()
     files = {}
-    for path in Path("src/neuclx").glob("*.py"):
-        files[f"neuclx/{path.name}"] = path.read_bytes()
+    package_root = Path("src/neuclx")
+    for path in package_root.rglob("*.py"):
+        files[Path("neuclx", path.relative_to(package_root)).as_posix()] = path.read_bytes()
     for path in Path("src/neuclx/static").glob("*"):
         if path.is_file():
             files[f"neuclx/static/{path.name}"] = path.read_bytes()

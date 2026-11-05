@@ -40,8 +40,11 @@ function formatMetadata(metadata) {
 
   const evidenceChain = Array.isArray(metadata.evidence_chain)
     ? metadata.evidence_chain
-        .map((step) => `<li>${esc(step.source_digest || step.source || 'source')}${step.matching_terms ? ` · ${esc(step.matching_terms.join(', '))}` : ''}${typeof step.score === 'number' ? ` · ${esc(step.score.toFixed(2))}` : ''}</li>`)
+        .map((step) => `<li>${esc(step.source_digest || step.source || 'source')}${step.state ? ` · ${esc(step.state)}` : ''}${step.matching_terms ? ` · ${esc(step.matching_terms.join(', '))}` : ''}${typeof step.score === 'number' ? ` · ${esc(step.score.toFixed(2))}` : ''}${step.excerpt ? `<br><small>${esc(step.excerpt)}</small>` : ''}</li>`)
         .join('')
+    : '';
+  const webSources = Array.isArray(metadata.web_sources)
+    ? `<ul>${metadata.web_sources.map((source) => `<li>${esc(source.source || 'source')} · ${esc(source.state || 'unavailable')}${source.reason ? ` · ${esc(source.reason)}` : ''}</li>`).join('')}</ul>`
     : '';
 
   const inputEvidence = Array.isArray(metadata.input_evidence) ? formatList(metadata.input_evidence) : '';
@@ -57,10 +60,33 @@ function formatMetadata(metadata) {
     <div class="chain">
       <h4>Evidence chain</h4>
       ${evidenceChain ? `<ul>${evidenceChain}</ul>` : '<div>Pa gjurmë të strukturuara.</div>'}
+      ${webSources ? `<h4>Public sources</h4>${webSources}` : ''}
       ${inputEvidence ? `<h4>Input evidence</h4>${inputEvidence}` : ''}
       ${derivedFacts ? `<h4>Derived facts</h4>${derivedFacts}` : ''}
       ${operations ? `<h4>Operations</h4>${operations}` : ''}
       ${confidence ? `<h4>Confidence breakdown</h4>${confidence}` : ''}
+    </div>`;
+}
+
+function renderMegaLayer(analysis) {
+  if (!analysis) return '';
+  const state = String(analysis.state || 'unavailable');
+  const metrics = analysis.value && typeof analysis.value === 'object' ? analysis.value : null;
+  if (state !== 'computed' || !metrics) {
+    return `<div class="chain"><h4>MegaLayer</h4><div>${esc(state)} · pa sinjale të disponueshme.</div></div>`;
+  }
+  const items = [
+    ['Combinations used', metrics.combinations_used],
+    ['Theoretical max', metrics.theoretical_max],
+    ['Complexity score', metrics.complexity_score],
+    ['Layers engaged', metrics.total_layers_engaged],
+    ['Processing ms', metrics.processing_ms],
+  ].filter(([, value]) => typeof value === 'number');
+  return `
+    <div class="chain">
+      <h4>MegaLayer · ${esc(state)}</h4>
+      <div><small>${esc(analysis.method || '')} · ${esc(analysis.source || '')}</small></div>
+      <ul>${items.map(([label, value]) => `<li>${esc(label)} · ${esc(value)}</li>`).join('')}</ul>
     </div>`;
 }
 
@@ -167,10 +193,14 @@ chat.addEventListener('submit', async (event) => {
   const question = promptInput.value.trim();
   if (!question) return;
   const facts = factInput.value.trim() ? [factInput.value.trim()] : [];
+  const sourceUrls = document.querySelector('#source-urls').value
+    .split(/\n|\r\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
   const response = await fetch('/api/respond', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: question, facts }),
+    body: JSON.stringify({ prompt: question, facts, source_urls: sourceUrls }),
   });
   const payload = await response.json();
   if (!response.ok) {
@@ -195,7 +225,14 @@ if (reasoningRun) {
     const response = await fetch('/api/reason', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task, facts: context }),
+      body: JSON.stringify({
+        task,
+        facts: context,
+        source_urls: document.querySelector('#source-urls').value
+          .split(/\n|\r\n/)
+          .map((line) => line.trim())
+          .filter(Boolean),
+      }),
     });
     const payload = await response.json();
     if (!response.ok) {
@@ -210,7 +247,10 @@ if (reasoningRun) {
       derived_facts: payload.derived_facts,
       operations: payload.operations,
       confidence_breakdown: payload.confidence_breakdown,
-      evidence_chain: payload.trace?.steps?.map((step) => ({ source: step.reasoning_type, matching_terms: [step.status], score: step.confidence })) || [],
+      evidence_chain: [
+        ...(payload.evidence_chain || []),
+        ...(payload.trace?.steps?.map((step) => ({ source: step.reasoning_type, matching_terms: [step.status], score: step.confidence })) || []),
+      ],
     });
 
     reasoningOutput.innerHTML = `
@@ -218,6 +258,7 @@ if (reasoningRun) {
         <div><strong>Intent:</strong> ${esc(payload.intent)}</div>
         <div><strong>Confidence:</strong> ${esc(payload.confidence)}</div>
       </div>
+      ${renderMegaLayer(payload.megalayer)}
       <div><strong>Përfundim:</strong><br>${esc(payload.conclusion)}</div>
       <div><strong>Evidence path:</strong><ul>${evidence || '<li>Pa evidencë të shfaqur</li>'}</ul></div>
       ${chain}

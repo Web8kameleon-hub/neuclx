@@ -69,10 +69,33 @@ class BridgeContractTests(unittest.TestCase):
             "location": "https://example.com",
             "hash": "abc",
             "license": "MIT",
-            "timestamp": "2026-01-01T00:00:00",
+            "timestamp": "2026-01-01T00:00:00+00:00",
+            "evidence_state": "computed",
             "content": "hello world",
         })
         self.assertTrue(valid)
+
+    def test_data_validator_rejects_jona_denial(self):
+        class DenyingSandbox:
+            def release(self, datum):
+                raise PermissionError("JONA rejected datum")
+
+        record = {
+            "id": "r-2",
+            "name": "denied-record",
+            "source_type": "repo",
+            "location": "https://example.com",
+            "hash": "abc",
+            "license": "MIT",
+            "timestamp": "2026-01-01T00:00:00+00:00",
+            "evidence_state": "computed",
+            "content": "hello world",
+        }
+        self.assertFalse(DataValidator(sandbox=DenyingSandbox()).validate_record(record))
+
+    def test_data_validator_rejects_missing_content(self):
+        validator = DataValidator()
+        self.assertFalse(validator.validate_record({"id": "incomplete"}))
 
 
 if __name__ == "__main__":
