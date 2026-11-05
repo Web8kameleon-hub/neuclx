@@ -23,6 +23,7 @@ from .stable_reasoning_engine import StableReasoningEngine
 from .vision_encoder import VisionEncoder
 from .creative_engine import CreativeEngine
 from .learning import LearningStore
+from .hybrid_fluid import HybridFluidError, HybridFluidPipeline
 from .megalayer import MegaLayerAdapter, MegaLayerError
 from .web_evidence import MAX_URLS, PublicWebReadError, PublicWebReader
 
@@ -39,9 +40,13 @@ class NeuCLXApplication:
         self.memory = EvidenceMemory(memory_path)
         stable_memory_path = str(Path(ledger_path).with_name(Path(ledger_path).stem + "_stable_memory.sqlite3"))
         self.stable_memory = EvidenceMemory(stable_memory_path)
-        self.model_adapter = ModelAdapter(provider="local", model_name="neuclx-core", enabled=False)
+        self.model_adapter = ModelAdapter.from_environment()
         self.reasoning_engine = ReasoningEngine(memory=self.memory, model=self.model_adapter)
         self.megalayer = MegaLayerAdapter.from_environment()
+        self.hybrid_fluid = HybridFluidPipeline.from_environment(
+            self.reasoning_engine.jona,
+            self.ledger,
+        )
         self.web_reader = PublicWebReader(sandbox=self.reasoning_engine.jona)
         self.stable_reasoning_engine = StableReasoningEngine(self.stable_memory, model_adapter=None)
         self.vision_encoder = VisionEncoder()
@@ -173,21 +178,114 @@ class NeuCLXApplication:
         return self.reasoning_engine.jona.release(result)
 
     def respond(self, prompt, facts=(), source_urls=None):
-        for fact in facts:
-            if isinstance(fact,str) and fact.strip():
-                digest = sha256(fact.encode('utf-8')).hexdigest()
-                self.learning.ingest('chat:user-declared:' + digest, 'sha256:' + digest, fact)
+        fact_list = [fact.strip() for fact in (facts or ()) if isinstance(fact, str) and fact.strip()]
+        for fact in fact_list:
+            digest = sha256(fact.encode('utf-8')).hexdigest()
+            self.learning.ingest('chat:user-declared:' + digest, 'sha256:' + digest, fact)
         hits, web_report = self._read_web_sources(prompt, source_urls)
         answer = self._attach_web_evidence(self.learning.answer(prompt), hits, web_report)
+        if self.model_adapter.enabled:
+            context = fact_list[:]
+            context.extend(
+                f"[{hit['source']}]\n{hit['excerpt']}"
+                for hit in answer.metadata.get("evidence_chain", [])
+                if hit.get("excerpt")
+            )
+            generated = self.reasoning_engine.converse(prompt, context)
+            answer = self.reasoning_engine.jona.release(
+                Datum(
+                    generated.value,
+                    generated.state,
+                    generated.source,
+                    generated.method,
+                    {
+                        **generated.metadata,
+                        "claim_status": "Model-generated response; not independently verified.",
+                        "retrieval_state": answer.state.value,
+                        "evidence_chain": answer.metadata.get("evidence_chain", []),
+                        "web_sources": answer.metadata.get("web_sources", web_report),
+                    },
+                )
+            )
         return self.ledger.record(prompt, answer)
 
-    def reason(self, task: str, facts=(), *, source_urls=None, max_iterations: int = 5):
+    def reason(
+        self,
+        task: str,
+        facts=(),
+        *,
+        source_urls=None,
+        max_iterations: int = 5,
+        mode: str = "native",
+    ):
         task_text = (task or "").strip()
         if not task_text:
             raise ValueError("task is required")
+        if mode not in {"native", "hybrid-fluid"}:
+            raise ValueError("mode must be 'native' or 'hybrid-fluid'")
+        if mode == "hybrid-fluid":
+            if source_urls:
+                raise ValueError("source_urls are not supported in hybrid-fluid mode; no URLs were read")
+            if not isinstance(facts, (list, tuple)):
+                raise TypeError("facts must be a list of strings")
+            fact_list = [
+                fact.strip()
+                for fact in (facts or [])
+                if isinstance(fact, str) and fact.strip()
+            ]
+            result = self.hybrid_fluid.run(task_text, fact_list)
+            trace = result.metadata.get("stages", [])
+            value = result.value if isinstance(result.value, dict) else {}
+            return {
+                "mode": "hybrid-fluid",
+                "task": task_text,
+                "intent": "hybrid-fluid-11-stage",
+                "state": result.state.value,
+                "conclusion": (
+                    "Hybrid-Fluid execution completed; raw service outputs are attached."
+                    if result.state is EvidenceState.COMPUTED
+                    else "Hybrid-Fluid result was not released by JONA."
+                ),
+                "confidence": None,
+                "confidence_state": EvidenceState.UNAVAILABLE.value,
+                "evidence_path": [
+                    nested.get("source")
+                    for key in ("alphabet_profile", "alphabet_result", "wave_indices", "megalayer", "fluid_engine")
+                    if isinstance((nested := value.get(key)), dict) and nested.get("source")
+                ],
+                "trace": {
+                    "steps": [
+                        {
+                            "reasoning_type": stage["name"],
+                            "status": stage["output_state"],
+                            "hypothesis": stage["jona_decision"],
+                        }
+                        for stage in trace
+                    ]
+                },
+                "status": result.state.value,
+                "ledger": value.get("ledger"),
+                "alphabet_profile": value.get("alphabet_profile"),
+                "alphabet_result": value.get("alphabet_result"),
+                "wave_indices": value.get("wave_indices"),
+                "megalayer": value.get("megalayer"),
+                "fluid_engine": value.get("fluid_engine"),
+                "response": result.as_dict(),
+            }
         web_hits, web_report = self._read_web_sources(task_text, source_urls)
         megalayer = self.megalayer.analyze(task_text, self.reasoning_engine.jona).as_dict()
         fact_list = [str(fact).strip() for fact in (facts or []) if isinstance(fact, str) and str(fact).strip()]
+        assistant_response = self.reasoning_engine.converse(
+            task_text,
+            [
+                *fact_list,
+                *(
+                    f"[{hit['source']}]\n{hit['excerpt']}"
+                    for hit in web_hits
+                    if hit.get("excerpt")
+                ),
+            ],
+        )
         if not fact_list:
             from .simple_logic_engine import SimpleLogicEngine
             is_simple, simple_answer, simple_confidence = SimpleLogicEngine.detect_and_solve(task_text)
@@ -221,6 +319,7 @@ class NeuCLXApplication:
                     'megalayer': megalayer,
                     'evidence_chain': web_hits,
                     'web_sources': web_report,
+                    'assistant_response': assistant_response.as_dict(),
                 }
             evidence = self._attach_web_evidence(self.learning.answer(task_text), web_hits, web_report)
             stored = self.ledger.record(task_text, evidence)
@@ -230,7 +329,8 @@ class NeuCLXApplication:
                     'evidence_path': [hit['source'] for hit in evidence.metadata.get('evidence_chain', [])],
                     'evidence_chain': evidence.metadata.get('evidence_chain', []),
                     'trace': {'steps': []}, 'status': 'ok', 'ledger': stored,
-                    'megalayer': megalayer, 'web_sources': web_report}
+                    'megalayer': megalayer, 'web_sources': web_report,
+                    'assistant_response': assistant_response.as_dict()}
         result = self.reasoning_engine.reason(task_text, fact_list, max_iterations=max_iterations)
         conclusion = self.reasoning_engine.jona.release(Datum(
             result["conclusion"],
@@ -264,6 +364,7 @@ class NeuCLXApplication:
             "megalayer": megalayer,
             "evidence_chain": web_hits,
             "web_sources": web_report,
+            "assistant_response": assistant_response.as_dict(),
         }
 
     def inspect_vision(self, image_path: str | None = None, image_bytes_b64: str | None = None, *, author: str | None = None, task: str | None = None):
@@ -327,13 +428,16 @@ def handler_factory(app):
             task = payload.get("task", payload.get("prompt", payload.get("question", "")))
             facts = payload.get("facts", payload.get("context", []))
             source_urls = payload.get("source_urls", [])
+            mode = payload.get("mode", "native")
             if not isinstance(task, str) or not task.strip():
                 raise ValueError("task is required")
             if not isinstance(facts, list):
                 facts = [str(facts)] if facts else []
             if not isinstance(source_urls, list):
                 raise TypeError("source_urls must be a list")
-            return app.reason(task.strip(), facts, source_urls=source_urls)
+            if not isinstance(mode, str):
+                raise TypeError("mode must be a string")
+            return app.reason(task.strip(), facts, source_urls=source_urls, mode=mode)
 
         def _handle_stable_reason_request(self, payload):
             task = payload.get("task", payload.get("prompt", payload.get("question", "")))
@@ -396,6 +500,11 @@ def handler_factory(app):
                 try:
                     data = self._parse_json_body()
                     self._json(self._handle_reason_request(data))
+                except HybridFluidError as exc:
+                    self._json(
+                        {"error": exc.error_code, "detail": str(exc)},
+                        exc.status_code,
+                    )
                 except MegaLayerError as exc:
                     self._json({"error": "megalayer_unavailable", "detail": str(exc)}, HTTPStatus.BAD_GATEWAY)
                 except PermissionError as exc:

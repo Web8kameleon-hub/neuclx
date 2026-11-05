@@ -1,0 +1,14 @@
+{
+  "state": "declared",
+  "version": "retrieval-development-v1",
+  "split": "development",
+  "origin": "NeuCLX-authored synthetic diagnostic fixtures; not held out",
+  "cases": [
+    {"id": "focused-excerpt", "query": "JONA sandbox", "documents": {"a-broad": "JONA sandbox architecture memory storage tracing retrieval logging deployment testing diagnostics configuration runtime monitoring release lifecycle modules design pipeline processing", "z-focused": "JONA sandbox policy"}, "expected_source": "z-focused"},
+    {"id": "rare-term", "query": "memory stigma", "documents": {"a-common": "memory storage", "b-common": "memory retrieval", "c-common": "memory records", "z-specific": "stigma imprint"}, "expected_source": "z-specific"},
+    {"id": "direct-match", "query": "provenance", "documents": {"audit": "provenance source revision", "memory": "compressed frames"}, "expected_source": "audit"},
+    {"id": "albanian", "query": "kujtesë", "documents": {"memory": "kujtesa dhe kujtesë lokale", "policy": "sandbox policy"}, "expected_source": "memory"},
+    {"id": "unknown", "query": "volcanology", "documents": {"policy": "JONA sandbox"}, "expected_source": null},
+    {"id": "insufficient-coverage", "query": "JONA volcano lunar ocean", "documents": {"policy": "JONA sandbox"}, "expected_source": null}
+  ]
+}

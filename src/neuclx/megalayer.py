@@ -36,13 +36,15 @@ class MegaLayerAdapter:
                 raise ValueError("MegaLayer endpoint must be an absolute HTTP(S) URL")
             if parsed.username or parsed.password:
                 raise ValueError("MegaLayer endpoint must not contain credentials")
+            if parsed.query or parsed.fragment or not parsed.path.rstrip("/").endswith("/process"):
+                raise ValueError("MegaLayer endpoint must be a /process URL without query or fragment")
             host = parsed.hostname or ""
             try:
                 loopback = ipaddress.ip_address(host).is_loopback
             except ValueError:
                 loopback = host.casefold() == "localhost"
-            if not loopback:
-                raise ValueError("MegaLayer endpoint must use loopback; hosted inference is not permitted")
+            if parsed.scheme == "http" and not loopback:
+                raise ValueError("non-loopback MegaLayer endpoints must use HTTPS")
         if timeout <= 0:
             raise ValueError("timeout must be positive")
         self.endpoint = endpoint
@@ -65,10 +67,14 @@ class MegaLayerAdapter:
 
         input_datum = Datum(
             query,
-            EvidenceState.DECLARED,
+            EvidenceState.MEASURED,
             source="neuclx:user-query",
-            method="reasoning:query",
+            method="http:received-query",
         )
+        decision = jona.evaluate(input_datum)
+        if decision.value != "allow":
+            jona.release(input_datum)
+            raise PermissionError(f"JONA did not allow the MegaLayer request: {decision.value}")
         jona.release(input_datum)
 
         request = Request(
@@ -100,7 +106,7 @@ class MegaLayerAdapter:
             source="Web8kameleon-hub/clisonix-evolution",
             method="MegaLayerEngine.process_query via POST /process",
             metadata={
-                "upstream_revision": UPSTREAM_REVISION,
+                "contract_reference_revision": UPSTREAM_REVISION,
                 "role": "analysis-metadata-only",
             },
         )

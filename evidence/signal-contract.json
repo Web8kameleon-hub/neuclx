@@ -1,0 +1,18 @@
+{
+  "state": "measured",
+  "captured_at": "2026-11-04T14:56:14.407268+00:00",
+  "method": "stdlib-unittest-signal-contract",
+  "tests_run": 10,
+  "failures": 0,
+  "errors": 0,
+  "successful": true,
+  "controller_bindings": "synthetic-test-only",
+  "remote_integration": {
+    "state": "not_implemented",
+    "value": null
+  },
+  "files": {
+    "src/neuclx/signal_gateway.py": "84821dcf03fe63520ea49a00161a56941e9be678c49503860687b6b82fc9430d",
+    "tests/test_signal_gateway.py": "349ec0fac61ced6107d9d1817f65b5f5bab70afbe686bc34113d383f6779b94f"
+  }
+}

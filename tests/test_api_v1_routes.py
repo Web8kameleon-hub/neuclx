@@ -7,6 +7,11 @@ from pathlib import Path
 from urllib import request, error
 
 from neuclx.evidence import Datum, EvidenceState
+from neuclx.hybrid_fluid import (
+    AlphabetLayerAdapter,
+    FluidEngineAdapter,
+    HybridFluidPipeline,
+)
 from neuclx.megalayer import MegaLayerAdapter
 from neuclx.web import NeuCLXApplication, handler_factory
 
@@ -88,6 +93,35 @@ class ApiV1RouteTests(unittest.TestCase):
             self.assertEqual(payload["megalayer"]["state"], "not_implemented")
             self.assertEqual(payload["state"], "computed")
             self.assertEqual(payload["conclusion"], "4")
+        finally:
+            server.shutdown()
+            server.server_close()
+            app.close()
+            thread.join(timeout=5)
+
+    def test_hybrid_fluid_route_fails_explicitly_when_services_are_unconfigured(self):
+        server, app, port, thread = self._server_for()
+        app.hybrid_fluid = HybridFluidPipeline(
+            app.reasoning_engine.jona,
+            app.ledger,
+            alphabet=AlphabetLayerAdapter(),
+            megalayer=MegaLayerAdapter(),
+            fluid=FluidEngineAdapter(),
+        )
+        try:
+            data = json.dumps({"task": "Kush je ti?", "mode": "hybrid-fluid"}).encode("utf-8")
+            req = request.Request(
+                f"http://127.0.0.1:{port}/api/v1/reason",
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(error.HTTPError) as raised:
+                request.urlopen(req, timeout=5)
+            self.assertEqual(raised.exception.code, 503)
+            payload = json.loads(raised.exception.read().decode("utf-8"))
+            self.assertEqual(payload["error"], "hybrid_fluid_not_configured")
+            self.assertIn("NEUCLX_ALPHABET_URL", payload["detail"])
         finally:
             server.shutdown()
             server.server_close()

@@ -1,0 +1,434 @@
+{
+  "state": "measured",
+  "schema_version": "1.0",
+  "captured_at": "2026-11-04T14:37:29.081829+00:00",
+  "fixture_version": "retrieval-development-v1",
+  "fixture_sha256": "4421ceefbce17e946bc9ed16fac7243dbfa44f2e3d73b1e9a49ea247c3686b97",
+  "split": "development",
+  "python": "3.13.5",
+  "method": "Five sequential calls per ranker per case; SQLite query and scoring included. Separate tracemalloc call measures Python allocations, not process RSS.",
+  "held_out_quality": {
+    "state": "unavailable",
+    "value": null
+  },
+  "summary": {
+    "overlap": {
+      "state": "computed",
+      "correct": 4,
+      "cases": 6,
+      "top_result_or_abstention_accuracy": 0.6666666666666666
+    },
+    "bm25": {
+      "state": "computed",
+      "correct": 6,
+      "cases": 6,
+      "top_result_or_abstention_accuracy": 1.0
+    }
+  },
+  "cases": [
+    {
+      "state": "measured",
+      "id": "focused-excerpt",
+      "expected_source": {
+        "state": "declared",
+        "value": "z-focused"
+      },
+      "overlap": {
+        "state": "measured",
+        "selected_source": "a-broad",
+        "correct": {
+          "state": "computed",
+          "value": false
+        },
+        "median_latency_ns": 513200,
+        "peak_traced_python_bytes": 8044,
+        "answer": {
+          "value": "[a-broad @ fixture:a2c9abb3589223f79789789e01c1cff8b256706603c8d53d2efb543971937cf6:1]\nJONA sandbox architecture memory storage tracing retrieval logging deployment testing diagnostics configuration runtime monitoring release lifecycle modules design pipeline processing",
+          "state": "declared",
+          "source": "learning-store",
+          "method": "cited-document-excerpts",
+          "metadata": {
+            "evidence_chain": [
+              {
+                "source": "a-broad",
+                "revision": "fixture:a2c9abb3589223f79789789e01c1cff8b256706603c8d53d2efb543971937cf6",
+                "sha256": "a2c9abb3589223f79789789e01c1cff8b256706603c8d53d2efb543971937cf6",
+                "line": 1,
+                "excerpt": "JONA sandbox architecture memory storage tracing retrieval logging deployment testing diagnostics configuration runtime monitoring release lifecycle modules design pipeline processing",
+                "state": "declared",
+                "score": 1.0,
+                "score_state": "computed",
+                "score_method": "overlap",
+                "query_coverage": 1.0,
+                "query_coverage_state": "computed"
+              }
+            ],
+            "jona_decision": "sandbox_only",
+            "claim_status": "Source declarations; not independently verified."
+          }
+        }
+      },
+      "bm25": {
+        "state": "measured",
+        "selected_source": "z-focused",
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 458200,
+        "peak_traced_python_bytes": 8044,
+        "answer": {
+          "value": "[z-focused @ fixture:842133d660526afef4763e154e8c41cdac7107b674150950fb66dc39835dfa79:1]\nJONA sandbox policy",
+          "state": "declared",
+          "source": "learning-store",
+          "method": "cited-document-excerpts",
+          "metadata": {
+            "evidence_chain": [
+              {
+                "source": "z-focused",
+                "revision": "fixture:842133d660526afef4763e154e8c41cdac7107b674150950fb66dc39835dfa79",
+                "sha256": "842133d660526afef4763e154e8c41cdac7107b674150950fb66dc39835dfa79",
+                "line": 1,
+                "excerpt": "JONA sandbox policy",
+                "state": "declared",
+                "score": 0.5463707890893755,
+                "score_state": "computed",
+                "score_method": "bm25",
+                "query_coverage": 1.0,
+                "query_coverage_state": "computed"
+              }
+            ],
+            "jona_decision": "sandbox_only",
+            "claim_status": "Source declarations; not independently verified."
+          }
+        }
+      }
+    },
+    {
+      "state": "measured",
+      "id": "rare-term",
+      "expected_source": {
+        "state": "declared",
+        "value": "z-specific"
+      },
+      "overlap": {
+        "state": "measured",
+        "selected_source": "a-common",
+        "correct": {
+          "state": "computed",
+          "value": false
+        },
+        "median_latency_ns": 686900,
+        "peak_traced_python_bytes": 7676,
+        "answer": {
+          "value": "[a-common @ fixture:a5047fefb815f755877d1b0f4f0f831a8677afd987fb808bbf929e605a6d4dda:1]\nmemory storage",
+          "state": "declared",
+          "source": "learning-store",
+          "method": "cited-document-excerpts",
+          "metadata": {
+            "evidence_chain": [
+              {
+                "source": "a-common",
+                "revision": "fixture:a5047fefb815f755877d1b0f4f0f831a8677afd987fb808bbf929e605a6d4dda",
+                "sha256": "a5047fefb815f755877d1b0f4f0f831a8677afd987fb808bbf929e605a6d4dda",
+                "line": 1,
+                "excerpt": "memory storage",
+                "state": "declared",
+                "score": 0.5,
+                "score_state": "computed",
+                "score_method": "overlap",
+                "query_coverage": 0.5,
+                "query_coverage_state": "computed"
+              }
+            ],
+            "jona_decision": "sandbox_only",
+            "claim_status": "Source declarations; not independently verified."
+          }
+        }
+      },
+      "bm25": {
+        "state": "measured",
+        "selected_source": "z-specific",
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 465200,
+        "peak_traced_python_bytes": 7676,
+        "answer": {
+          "value": "[z-specific @ fixture:d8850030cc230644a122f06db97b942e02bbc21b9937d74ce32d61b82f4b28c0:1]\nstigma imprint",
+          "state": "declared",
+          "source": "learning-store",
+          "method": "cited-document-excerpts",
+          "metadata": {
+            "evidence_chain": [
+              {
+                "source": "z-specific",
+                "revision": "fixture:d8850030cc230644a122f06db97b942e02bbc21b9937d74ce32d61b82f4b28c0",
+                "sha256": "d8850030cc230644a122f06db97b942e02bbc21b9937d74ce32d61b82f4b28c0",
+                "line": 1,
+                "excerpt": "stigma imprint",
+                "state": "declared",
+                "score": 1.2039728043259361,
+                "score_state": "computed",
+                "score_method": "bm25",
+                "query_coverage": 0.5,
+                "query_coverage_state": "computed"
+              }
+            ],
+            "jona_decision": "sandbox_only",
+            "claim_status": "Source declarations; not independently verified."
+          }
+        }
+      }
+    },
+    {
+      "state": "measured",
+      "id": "direct-match",
+      "expected_source": {
+        "state": "declared",
+        "value": "audit"
+      },
+      "overlap": {
+        "state": "measured",
+        "selected_source": "audit",
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 644100,
+        "peak_traced_python_bytes": 6797,
+        "answer": {
+          "value": "[audit @ fixture:f229e9f6350c7f6e853c43120a550c7603da6d11911751ffa61e71e64da80a09:1]\nprovenance source revision",
+          "state": "declared",
+          "source": "learning-store",
+          "method": "cited-document-excerpts",
+          "metadata": {
+            "evidence_chain": [
+              {
+                "source": "audit",
+                "revision": "fixture:f229e9f6350c7f6e853c43120a550c7603da6d11911751ffa61e71e64da80a09",
+                "sha256": "f229e9f6350c7f6e853c43120a550c7603da6d11911751ffa61e71e64da80a09",
+                "line": 1,
+                "excerpt": "provenance source revision",
+                "state": "declared",
+                "score": 1.0,
+                "score_state": "computed",
+                "score_method": "overlap",
+                "query_coverage": 1.0,
+                "query_coverage_state": "computed"
+              }
+            ],
+            "jona_decision": "sandbox_only",
+            "claim_status": "Source declarations; not independently verified."
+          }
+        }
+      },
+      "bm25": {
+        "state": "measured",
+        "selected_source": "audit",
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 566600,
+        "peak_traced_python_bytes": 6797,
+        "answer": {
+          "value": "[audit @ fixture:f229e9f6350c7f6e853c43120a550c7603da6d11911751ffa61e71e64da80a09:1]\nprovenance source revision",
+          "state": "declared",
+          "source": "learning-store",
+          "method": "cited-document-excerpts",
+          "metadata": {
+            "evidence_chain": [
+              {
+                "source": "audit",
+                "revision": "fixture:f229e9f6350c7f6e853c43120a550c7603da6d11911751ffa61e71e64da80a09",
+                "sha256": "f229e9f6350c7f6e853c43120a550c7603da6d11911751ffa61e71e64da80a09",
+                "line": 1,
+                "excerpt": "provenance source revision",
+                "state": "declared",
+                "score": 0.6359148445504086,
+                "score_state": "computed",
+                "score_method": "bm25",
+                "query_coverage": 1.0,
+                "query_coverage_state": "computed"
+              }
+            ],
+            "jona_decision": "sandbox_only",
+            "claim_status": "Source declarations; not independently verified."
+          }
+        }
+      }
+    },
+    {
+      "state": "measured",
+      "id": "albanian",
+      "expected_source": {
+        "state": "declared",
+        "value": "memory"
+      },
+      "overlap": {
+        "state": "measured",
+        "selected_source": "memory",
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 484300,
+        "peak_traced_python_bytes": 6798,
+        "answer": {
+          "value": "[memory @ fixture:7918ab5fe0a46b66a153ca65b1c2d59e680e748e5bf3f4cce7f529f2949bf13b:1]\nkujtesa dhe kujtesë lokale",
+          "state": "declared",
+          "source": "learning-store",
+          "method": "cited-document-excerpts",
+          "metadata": {
+            "evidence_chain": [
+              {
+                "source": "memory",
+                "revision": "fixture:7918ab5fe0a46b66a153ca65b1c2d59e680e748e5bf3f4cce7f529f2949bf13b",
+                "sha256": "7918ab5fe0a46b66a153ca65b1c2d59e680e748e5bf3f4cce7f529f2949bf13b",
+                "line": 1,
+                "excerpt": "kujtesa dhe kujtesë lokale",
+                "state": "declared",
+                "score": 1.0,
+                "score_state": "computed",
+                "score_method": "overlap",
+                "query_coverage": 1.0,
+                "query_coverage_state": "computed"
+              }
+            ],
+            "jona_decision": "sandbox_only",
+            "claim_status": "Source declarations; not independently verified."
+          }
+        }
+      },
+      "bm25": {
+        "state": "measured",
+        "selected_source": "memory",
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 456100,
+        "peak_traced_python_bytes": 6798,
+        "answer": {
+          "value": "[memory @ fixture:7918ab5fe0a46b66a153ca65b1c2d59e680e748e5bf3f4cce7f529f2949bf13b:1]\nkujtesa dhe kujtesë lokale",
+          "state": "declared",
+          "source": "learning-store",
+          "method": "cited-document-excerpts",
+          "metadata": {
+            "evidence_chain": [
+              {
+                "source": "memory",
+                "revision": "fixture:7918ab5fe0a46b66a153ca65b1c2d59e680e748e5bf3f4cce7f529f2949bf13b",
+                "sha256": "7918ab5fe0a46b66a153ca65b1c2d59e680e748e5bf3f4cce7f529f2949bf13b",
+                "line": 1,
+                "excerpt": "kujtesa dhe kujtesë lokale",
+                "state": "declared",
+                "score": 0.6359148445504086,
+                "score_state": "computed",
+                "score_method": "bm25",
+                "query_coverage": 1.0,
+                "query_coverage_state": "computed"
+              }
+            ],
+            "jona_decision": "sandbox_only",
+            "claim_status": "Source declarations; not independently verified."
+          }
+        }
+      }
+    },
+    {
+      "state": "measured",
+      "id": "unknown",
+      "expected_source": {
+        "state": "declared",
+        "value": null
+      },
+      "overlap": {
+        "state": "measured",
+        "selected_source": null,
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 401500,
+        "peak_traced_python_bytes": 6241,
+        "answer": {
+          "value": null,
+          "state": "unavailable",
+          "source": null,
+          "method": "document-retrieval",
+          "metadata": {
+            "evidence_chain": []
+          }
+        }
+      },
+      "bm25": {
+        "state": "measured",
+        "selected_source": null,
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 444200,
+        "peak_traced_python_bytes": 6241,
+        "answer": {
+          "value": null,
+          "state": "unavailable",
+          "source": null,
+          "method": "document-retrieval",
+          "metadata": {
+            "evidence_chain": []
+          }
+        }
+      }
+    },
+    {
+      "state": "measured",
+      "id": "insufficient-coverage",
+      "expected_source": {
+        "state": "declared",
+        "value": null
+      },
+      "overlap": {
+        "state": "measured",
+        "selected_source": null,
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 400300,
+        "peak_traced_python_bytes": 6374,
+        "answer": {
+          "value": null,
+          "state": "unavailable",
+          "source": null,
+          "method": "document-retrieval",
+          "metadata": {
+            "evidence_chain": []
+          }
+        }
+      },
+      "bm25": {
+        "state": "measured",
+        "selected_source": null,
+        "correct": {
+          "state": "computed",
+          "value": true
+        },
+        "median_latency_ns": 400800,
+        "peak_traced_python_bytes": 6374,
+        "answer": {
+          "value": null,
+          "state": "unavailable",
+          "source": null,
+          "method": "document-retrieval",
+          "metadata": {
+            "evidence_chain": []
+          }
+        }
+      }
+    }
+  ]
+}

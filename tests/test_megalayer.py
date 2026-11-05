@@ -15,9 +15,15 @@ class MegaLayerAdapterTests(unittest.TestCase):
         self.assertIsNone(result.value)
         self.assertEqual(result.state, EvidenceState.NOT_IMPLEMENTED)
 
-    def test_adapter_rejects_non_loopback_endpoints(self):
-        with self.assertRaisesRegex(ValueError, "loopback"):
-            MegaLayerAdapter("https://inference.example/process")
+    def test_adapter_accepts_https_services_and_rejects_remote_http(self):
+        self.assertEqual(
+            MegaLayerAdapter("https://megalayer.example/process").endpoint,
+            "https://megalayer.example/process",
+        )
+        with self.assertRaisesRegex(ValueError, "HTTPS"):
+            MegaLayerAdapter("http://megalayer.example/process")
+        with self.assertRaisesRegex(ValueError, "/process"):
+            MegaLayerAdapter("https://megalayer.example/api")
 
     def test_processes_query_through_jona_and_returns_computed_metrics(self):
         received = {}
@@ -57,7 +63,10 @@ class MegaLayerAdapterTests(unittest.TestCase):
         self.assertEqual(received, {"path": "/process", "body": {"query": "Sa është 2 + 2?"}})
         self.assertEqual(result.state, EvidenceState.COMPUTED)
         self.assertEqual(result.value["unique_signature"], "sig-123")
-        self.assertEqual(result.metadata["upstream_revision"], "f120457ab2c38c5bac9d23b62fca5d4ea6f17a0e")
+        self.assertEqual(
+            result.metadata["contract_reference_revision"],
+            "f120457ab2c38c5bac9d23b62fca5d4ea6f17a0e",
+        )
 
     def test_jona_rejection_blocks_outbound_request(self):
         class RejectingSandbox:

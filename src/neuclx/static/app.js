@@ -7,6 +7,7 @@ const agentSelect = document.querySelector('#agent-name');
 const agentQuestion = document.querySelector('#agent-question');
 const agentRun = document.querySelector('#agent-run');
 const agentOutput = document.querySelector('#agent-output');
+const reasoningMode = document.querySelector('#reasoning-mode');
 const reasoningTask = document.querySelector('#reasoning-task');
 const reasoningContext = document.querySelector('#reasoning-context');
 const reasoningRunSource = document.querySelector('#reasoning-run');
@@ -228,6 +229,7 @@ if (reasoningRun) {
       body: JSON.stringify({
         task,
         facts: context,
+        mode: reasoningMode.value,
         source_urls: document.querySelector('#source-urls').value
           .split(/\n|\r\n/)
           .map((line) => line.trim())
@@ -237,6 +239,25 @@ if (reasoningRun) {
     const payload = await response.json();
     if (!response.ok) {
       reasoningOutput.textContent = payload.detail || payload.error || 'Gabim në reason API';
+      return;
+    }
+
+    if (payload.mode === 'hybrid-fluid') {
+      const responseValue = payload.response?.value || {};
+      const serviceOutputs = {
+        alphabet_profile: responseValue.alphabet_profile,
+        alphabet_result: responseValue.alphabet_result,
+        wave_indices: responseValue.wave_indices,
+        megalayer: responseValue.megalayer,
+        fluid_engine: responseValue.fluid_engine,
+      };
+      const stages = (payload.trace?.steps || [])
+        .map((step) => `<li>${esc(step.reasoning_type)} · ${esc(step.status)} · JONA ${esc(step.hypothesis)}</li>`)
+        .join('');
+      reasoningOutput.innerHTML = `
+        <div><strong>Hybrid-Fluid · ${esc(payload.state)}</strong><br>${esc(payload.conclusion)}</div>
+        <div><strong>JONA-gated 11-stage trace</strong><ul>${stages}</ul></div>
+        <div><strong>Real service outputs</strong><pre>${esc(JSON.stringify(serviceOutputs, null, 2))}</pre></div>`;
       return;
     }
 
@@ -252,6 +273,7 @@ if (reasoningRun) {
         ...(payload.trace?.steps?.map((step) => ({ source: step.reasoning_type, matching_terms: [step.status], score: step.confidence })) || []),
       ],
     });
+    const assistant = payload.assistant_response || {};
 
     reasoningOutput.innerHTML = `
       <div class="reasoning-summary">
@@ -259,7 +281,8 @@ if (reasoningRun) {
         <div><strong>Confidence:</strong> ${esc(payload.confidence)}</div>
       </div>
       ${renderMegaLayer(payload.megalayer)}
-      <div><strong>Përfundim:</strong><br>${esc(payload.conclusion)}</div>
+      ${assistant.value ? `<div><strong>Përgjigjja e modelit · ${esc(assistant.state)}</strong><br>${esc(assistant.value)}</div>` : ''}
+      <div><strong>Përfundim i bazuar në evidencë:</strong><br>${esc(payload.conclusion)}</div>
       <div><strong>Evidence path:</strong><ul>${evidence || '<li>Pa evidencë të shfaqur</li>'}</ul></div>
       ${chain}
       <div><strong>Trace:</strong>${steps || '<div>Pa hapa</div>'}</div>`;

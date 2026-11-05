@@ -11,6 +11,7 @@ import unicodedata
 
 from .evidence import Datum, EvidenceState
 from .jona import JonaSandbox, PolicyDecision
+from .retrieval import bm25_scores
 
 
 @contextmanager
@@ -23,12 +24,16 @@ def connection(path):
         db.close()
 
 
-def terms(text):
+def term_tokens(text):
     normalized = unicodedata.normalize('NFKD', text.casefold())
     normalized = ''.join(c for c in normalized if not unicodedata.combining(c))
     stop = set('the and for with from this that what how is are a an of in to ne nje dhe eshte cila cili roli si te e i kush je ti mund duket pse ku kur sa ka nuk jemi ketu'.split())
     words = re.findall(r'[a-zçëq]+', normalized)
-    return {w for w in words if w not in stop and len(w) > 2}
+    return [w for w in words if w not in stop and len(w) > 2]
+
+
+def terms(text):
+    return set(term_tokens(text))
 
 
 class LearningStore:
@@ -59,24 +64,32 @@ class LearningStore:
             count = db.execute('SELECT count(*) FROM documents').fetchone()[0]
         return self.sandbox.release(Datum({'documents': count}, EvidenceState.MEASURED, 'learning-store', 'sqlite-count'))
 
-    def answer(self, query, limit=3):
+    def answer(self, query, limit=3, *, ranker='overlap'):
+        if ranker not in {'overlap', 'bm25'}:
+            raise ValueError('ranker must be overlap or bm25')
         wanted = terms(query)
         ranked = []
+        excerpts = []
         with connection(self.path) as db:
             rows = db.execute('SELECT source,revision,digest,content FROM documents ORDER BY source').fetchall()
         for source, revision, digest, content in rows:
             lines = content.splitlines()
             for start in range(0, len(lines), 12):
                 excerpt = '\n'.join(lines[start:start + 12]).strip()
-                overlap = wanted & terms(excerpt)
-                if not overlap:
-                    continue
-                score = len(overlap) / max(1, len(wanted))
-                if score < 0.45:
-                    continue
-                ranked.append((score, source, start, {'source': source, 'revision': revision, 'sha256': digest,
-                    'line': start + 1, 'excerpt': excerpt, 'state': 'declared', 'score': score,
-                    'score_state': 'computed'}))
+                excerpts.append((source, revision, digest, start, excerpt, term_tokens(excerpt)))
+        relevance = bm25_scores(wanted, [row[5] for row in excerpts]) if ranker == 'bm25' else None
+        for index, (source, revision, digest, start, excerpt, tokens) in enumerate(excerpts):
+            overlap = wanted & set(tokens)
+            if not overlap:
+                continue
+            coverage = len(overlap) / max(1, len(wanted))
+            if coverage < 0.45:
+                continue
+            score = relevance[index] if relevance is not None else coverage
+            ranked.append((score, source, start, {'source': source, 'revision': revision, 'sha256': digest,
+                'line': start + 1, 'excerpt': excerpt, 'state': 'declared', 'score': score,
+                'score_state': 'computed', 'score_method': ranker,
+                'query_coverage': coverage, 'query_coverage_state': 'computed'}))
         ranked.sort(key=lambda row: (-row[0], row[1], row[2]))
         hits = [row[3] for row in ranked[:max(1, min(limit, 10))]]
         if not hits:
@@ -136,6 +149,8 @@ def main():
     parser.add_argument('--store', default='data/neuclx_learning.sqlite3')
     parser.add_argument('--documents', action='append', default=[])
     parser.add_argument('--query')
+    parser.add_argument('--ranker', choices=('overlap', 'bm25'), default='overlap',
+                        help='Experimental BM25 is opt-in; overlap remains the default')
     parser.add_argument('--snapshots', help='Explicit JSON snapshot file with pinned repository revisions')
     args = parser.parse_args()
     store = LearningStore(args.store)
@@ -148,7 +163,7 @@ def main():
             report['imported' if changed else 'unchanged'] += 1
         report['store'] = store.status().as_dict()
     if args.query:
-        report['answer'] = store.answer(args.query).as_dict()
+        report['answer'] = store.answer(args.query, ranker=args.ranker).as_dict()
     print(json.dumps(report, ensure_ascii=True, indent=2))
 
 

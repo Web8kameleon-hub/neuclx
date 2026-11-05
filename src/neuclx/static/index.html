@@ -14,10 +14,15 @@
 <section class="reasoning-console" aria-label="Reasoning console">
   <div class="agent-header"><h2>Live Reasoning Trace</h2><span>CoT · ToT · JONA</span></div>
   <div class="reasoning-controls">
+    <select id="reasoning-mode" aria-label="Reasoning pipeline">
+      <option value="hybrid-fluid" selected>Hybrid-Fluid · 11 stages</option>
+      <option value="native">NeuCLX native</option>
+    </select>
     <textarea id="reasoning-task" rows="3" placeholder="Shkruaj pyetjen që dëshiron të arsyetosh…"></textarea>
     <textarea id="reasoning-context" rows="3" placeholder="Fakte ose kontekst opsional (një fakt në një rresht)"></textarea>
     <button type="button" id="reasoning-run">Run reasoning</button>
   </div>
+  <small>Hybrid-Fluid requires configured Alphabet, MegaLayer and FluidEngine services. No local fallback is used.</small>
   <div id="reasoning-output" class="reasoning-output" aria-live="polite">Pritet një pyetje e vërtetë për të filluar arsyetimin.</div>
 </section>
 <section id="journey" class="journey" aria-live="polite"></section><form id="chat"><label for="prompt">Hapi i ardhshëm</label><div class="composer"><textarea id="prompt" rows="2" placeholder="Pyet, ndërto, zbulo…" required></textarea><button type="submit">→</button></div><div class="fact"><input id="fact" placeholder="Fakt opsional"><span>Stigma Film · Provenance · No artificial fill</span></div><label for="source-urls">Burime publike HTTPS (një URL për rresht, opsionale)</label><textarea id="source-urls" rows="2" placeholder="https://www.clisonix.com/modules/web-reader"></textarea><small>Lexohen vetëm faqet publike të dhëna; tekst i shkurtër i cituar, jo trajnim i modelit.</small></form></main><script>
@@ -40,7 +45,7 @@ reasoningRun.addEventListener('click', async () => {
   const response = await fetch('/api/reason', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ task, facts: context })
+    body: JSON.stringify({ task, facts: context, mode: document.querySelector('#reasoning-mode').value })
   });
   const payload = await response.json();
   if (!response.ok) {

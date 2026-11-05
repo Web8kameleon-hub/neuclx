@@ -192,3 +192,53 @@ user-declared `www.neurosonic.eu`, so these names are not silently treated as
 the same repository. The import manifest remains the 16-repository candidate
 inventory; the table above records additional lineage references without
 promoting private or commercially licensed code into that inventory.
+
+## Pipeline source discovery, 2026-11-05
+
+`measured`: The repositories and paths below were identified by pinned GitHub
+tree listings. This is path discovery, not full source review or evidence that
+the pipeline runs. No pipeline source code was copied or executed. Repository
+license metadata is recorded as `NOASSERTION` where GitHub did not report a
+license; that value is not a license grant.
+
+| Repository | Path | Revision | Adaptation status |
+|---|---|---|---|
+| Web8kameleon-hub/Kloud | ai_agi_pipeline.py; core/pipelines/pipeline_framework.py; hybrid_protocol_pipeline.py; airflow/dags/{clinicaltrials,crossref,openalex,openfda,pubmed,semantic_scholar}_ingest.py; app/modules/auto_adapt_trainer.ts | 9e2d2356d98c427a3f2eb6cf52e1c6618a608577 | measured; discovered only; repository license metadata NOASSERTION; static source/license/dependency review and blob comparison pending |
+| Web8kameleon-hub/clisonix.com | ai_agi_pipeline.py; .github/workflows/{ingestion,ocean-model-stack,ocean-runtime-deploy,ocean-runtime-diagnostics}.yml | 3a7eb115a71f063dc0bb7b54664583a1c4a2b08c | measured; discovered only; repository license metadata NOASSERTION; no adaptation |
+| Web8kameleon-hub/clisonix-evolution | ai_agi_pipeline.py; airflow/dags/; ocean_core/pipelines/; ocean_core/reasoning_engine.py; hybrid_saas_platform/run_pipeline.py | f120457ab2c38c5bac9d23b62fca5d4ea6f17a0e | measured; discovered only; repository license metadata NOASSERTION; potential overlap with Kloud requires blob-level comparison |
+| Web8kameleon-hub/OS-CLX | imports/kloud/ocean-core/pipelines/{reasoning,safety,context_manager}.py; runtime/internal/api/control_plane_pipeline.go; nin-engine/nin_core.py | c54e104f94adb972b0c69e2a6ac750242c0c1048 | measured; discovered only; repository license metadata NOASSERTION; reasoning and control-plane paths need separate review |
+| Web8kameleon-hub/Ultrawebthinkig-v2 | core/engines/{agi-engine,chat-engine,reasoning-engine}.ts | 8c7263eee2dc25cdb7aa09c6c8b779929ae3cbf3 | measured; discovered only; repository license metadata NOASSERTION; no adaptation |
+| Web8kameleon-hub/Lightning-SPP-3.14 | .github/workflows/{ci-cd,continuous-release-evidence,hosting-readiness,release-readiness,runtime-packages}.yml; Scripts/package-release.py; Scripts/validate-release-companions.py | c673de4c8e51321520250c9539ef4535a196d919 | measured; discovered only; repository license metadata NOASSERTION; CI/release candidates, not an AI runtime; Persistence/Longo has a separately recorded commercial boundary |
+
+`declared`: The user authorized adapting selected AI, data, reasoning, signal,
+CI/release/deploy and business-workflow pipeline sources from the identified
+Web8kameleon-hub repositories, including private repositories. Authorization
+does not replace path-level source review, applicable license notices,
+dependency review, secret scanning, duplicate detection, JONA admission, or
+tests. The OpenAI-compatible ModelAdapter is new NeuCLX code and does not copy
+these pipeline implementations.
+
+## Hybrid-Fluid service contracts
+
+`computed`: NeuCLX now has new standard-library HTTP adapters and an explicit
+11-stage pipeline. The adapters use the referenced JSON/API contracts; no
+upstream implementation code is copied. Environment configuration is required,
+JONA authorizes each outbound request, redirects are rejected, and there is no
+local or hosted-model fallback.
+
+| Repository | Path | Revision | Adaptation status |
+|---|---|---|---|
+| Web8kameleon-hub/clisonix.com | alphabet_layers_api.py; ocean-core/alphabet_layers.py | 3a7eb115a71f063dc0bb7b54664583a1c4a2b08c | computed; new stdlib client for health, stats, process and computed wave-index routes; upstream 61-layer mismatch is rejected |
+| Web8kameleon-hub/clisonix-evolution | ocean_core/api_mega_layer.py; ocean_core/mega_layer_engine.py | f120457ab2c38c5bac9d23b62fca5d4ea6f17a0e | computed; existing stdlib client is JONA-gated and permits configured HTTPS endpoints; response revision is identified as a contract reference, not a verified deployed revision |
+| Web8kameleon-hub/Lightning-SPP-3.14 | wwwmmm.FluidEngine/openapi.fluid.json | c673de4c8e51321520250c9539ef4535a196d919 | computed; new stdlib client sends the selected configured pipeline name and actual upstream results; response shape is preserved without an invented success schema |
+
+`unavailable`: Live service health and execution. No service endpoints were
+configured in the inspected environment, and local HTTP fixture tests do not
+establish that a remote deployment is running these exact source revisions.
+
+`computed`: `src/neuclx/pipeline.py` implements a native, JONA-gated explicit
+stage runner inspired by the sequence-of-stages concept in the Kloud framework.
+It does not copy source code. The upstream file imports PyYAML and defines
+`CODE` and `TOOL` step types; those dynamic execution/configuration surfaces
+were not carried into NeuCLX. `tests/test_pipeline.py` covers allow, hold,
+reject, invalid output and exception behavior.
