@@ -254,3 +254,4 @@ reject, invalid output and exception behavior.
 hybrid-fluid mode with `llama3.1:8b` via Ollama. Scoring is a term-overlap proxy
 against the dataset's reference answers, not the official TruthfulQA metric.
 The result is development evidence and does not establish AI rank.
+| Web8kameleon-hub/OS-CLX | docs/hardware/stigma_center_core.v | c54e104f94adb972b0c69e2a6ac750242c0c1048 | declared; owner-authored, private repo; RTL not copied. src/neuclx/stigma_chip.py is a bit-exact uint64 software model of memory/momentum/V_dpa integer semantics (computed). RTL was NOT simulated: no Verilog simulator is installed (choco needs admin). Speed, power and area stay not_implemented |
