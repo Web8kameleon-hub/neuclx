@@ -149,7 +149,10 @@ computed grounding index (term overlap and literal source mentions, not a
 truth score). Documents are classified `bigdata` (>= 256 KiB), `seltendata`
 (<= 1 retrieval) or `standarddata` by a computed rule over stored size and
 retrieval hits; these tiers are NeuCLX definitions, not FluidEngine pipeline
-behavior. The pre-existing API path remains selectable as
+behavior. `newdata` is a quarantined fourth class: the first occurrence of a
+normalized-answer signature or of a facet combination (mode, model, source
+hosts) is counted as computed novelty. It is not validity or creativity, and it
+never enters the retrieval corpus. The pre-existing API path remains selectable as
 `native`; API callers that omit `mode` retain that behavior.
 
 `measured`: The inspected Clisonix alphabet service source at

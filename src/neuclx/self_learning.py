@@ -39,6 +39,11 @@ class SelfLearning:
                 "CREATE TABLE IF NOT EXISTS source_usage ("
                 "source TEXT PRIMARY KEY, hits INTEGER NOT NULL, first_used TEXT NOT NULL, last_used TEXT NOT NULL)"
             )
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS new_data ("
+                "signature TEXT PRIMARY KEY, kind TEXT NOT NULL, detail TEXT NOT NULL, "
+                "first_seen TEXT NOT NULL, count INTEGER NOT NULL)"
+            )
 
     def learn_web_hits(self, hits) -> int:
         learned = 0
@@ -78,7 +83,7 @@ class SelfLearning:
             listing.append({"source": source, "bytes": size, "hits": hits, "tier": tier})
         listing.sort(key=lambda row: (-row["hits"], row["source"]))
         return Datum(
-            {"documents": len(rows), "tiers": counts, "top": listing[: max(1, min(limit, 100))]},
+            {"documents": len(rows), "tiers": counts, "newdata": self.newdata(), "top": listing[: max(1, min(limit, 100))]},
             EvidenceState.COMPUTED,
             source="neuclx:self-learning",
             method="tier-classification",
@@ -102,7 +107,7 @@ class SelfLearning:
             "note": "Term-overlap index and literal source mentions; not a truth or correctness score.",
         }
 
-    def remember_answer(self, question: str, answer: Datum, hits) -> dict:
+    def remember_answer(self, question: str, answer: Datum, hits, facets: dict | None = None) -> dict:
         grounding = self.grounding(str(answer.value or ""), hits)
         claim = (
             "Model-generated response; sources were supplied as context but are declared, not verified."
@@ -126,4 +131,41 @@ class SelfLearning:
             )
         )
         stone = self.ledger.record(question, released)
-        return {"answer": released, "stone": stone, "grounding": grounding}
+        novelty = self.observe_novelty(str(answer.value or ""), facets or {})
+        return {"answer": released, "stone": stone, "grounding": grounding, "novelty": novelty}
+
+    def observe_novelty(self, answer_text: str, facets: dict) -> dict:
+        """Quarantined newdata: records first occurrences only, never validates them."""
+        normalized = " ".join(sorted(term_tokens(answer_text)))
+        answer_sig = "answer:" + sha256(normalized.encode("utf-8")).hexdigest()[:24]
+        combo = "|".join(f"{key}={facets[key]}" for key in sorted(facets))
+        combo_sig = "combination:" + sha256(combo.encode("utf-8")).hexdigest()[:24]
+        now = datetime.now(UTC).isoformat()
+        result = {}
+        with connection(self.learning.path) as db:
+            for kind, signature, detail in (
+                ("first_seen_answer", answer_sig if normalized else None, ""),
+                ("new_combination", combo_sig if facets else None, combo),
+            ):
+                if signature is None:
+                    continue
+                row = db.execute("SELECT count FROM new_data WHERE signature=?", (signature,)).fetchone()
+                if row is None:
+                    db.execute(
+                        "INSERT INTO new_data(signature, kind, detail, first_seen, count) VALUES(?,?,?,?,1)",
+                        (signature, kind, detail, now),
+                    )
+                else:
+                    db.execute("UPDATE new_data SET count = count + 1 WHERE signature=?", (signature,))
+                result[kind] = row is None
+        return {
+            **result,
+            "state": EvidenceState.COMPUTED.value,
+            "quarantine": True,
+            "note": "Novelty means first occurrence of a signature in this store; it is not validity, truth or creativity, and newdata is never added to the retrieval corpus.",
+        }
+
+    def newdata(self) -> dict:
+        with connection(self.learning.path) as db:
+            rows = db.execute("SELECT kind, COUNT(*) FROM new_data GROUP BY kind").fetchall()
+        return dict(rows)

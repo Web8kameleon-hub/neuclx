@@ -64,5 +64,19 @@ class SelfLearningTests(unittest.TestCase):
         self.assertGreaterEqual(grounding["answer_term_overlap"], 0.5)
 
 
+    def test_newdata_flags_first_occurrence_only_and_stays_out_of_corpus(self):
+        before = self.learning.status().value["documents"]
+        facets = {"mode": "hybrid-fluid", "model": "local:x", "sources": "example.org"}
+        first = self.sl.observe_novelty("Skenderbeu udhehoqi rezistencen", facets)
+        again = self.sl.observe_novelty("rezistencen udhehoqi Skenderbeu", facets)
+        other = self.sl.observe_novelty("Tekst i ri krejt tjeter", {**facets, "model": "local:y"})
+        self.assertTrue(first["first_seen_answer"] and first["new_combination"])
+        self.assertFalse(again["first_seen_answer"] or again["new_combination"])
+        self.assertTrue(other["first_seen_answer"] and other["new_combination"])
+        self.assertEqual(self.sl.newdata(), {"first_seen_answer": 2, "new_combination": 2})
+        self.assertEqual(self.learning.status().value["documents"], before)
+        self.assertTrue(first["quarantine"])
+
+
 if __name__ == "__main__":
     unittest.main()

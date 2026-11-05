@@ -261,7 +261,12 @@ class NeuCLXApplication:
                     *signals,
                 ]
                 generated = self.reasoning_engine.converse(task_text, context)
-                memory = self.self_learning.remember_answer(task_text, generated, hits)
+                facets = {
+                    "mode": "hybrid-fluid",
+                    "model": str(generated.source),
+                    "sources": ",".join(sorted({urlparse(str(h.get("source", ""))).hostname or "" for h in hits})),
+                }
+                memory = self.self_learning.remember_answer(task_text, generated, hits, facets)
                 model_answer = memory["answer"]
                 self.self_learning.record_use(hits)
             return {
@@ -303,7 +308,7 @@ class NeuCLXApplication:
                 "web_sources": web_report,
                 "learned_excerpts": learned_count,
                 "self_memory": (
-                    {"stone": memory["stone"]["number"], "stigma_frame": memory["stone"]["stigma_frame"], "grounding": memory["grounding"]}
+                    {"stone": memory["stone"]["number"], "stigma_frame": memory["stone"]["stigma_frame"], "grounding": memory["grounding"], "novelty": memory["novelty"]}
                     if memory is not None
                     else None
                 ),
