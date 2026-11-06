@@ -64,6 +64,16 @@ class HVWOLattice:
         return sum(c.activation for c in self.cells.values() if c.axis in allowed)
 
     def directional_derivative(self, axis: Axis, layer: int) -> float:
+        """Ndryshimi i aktivizimit përgjatë aksit — ky është "drejtimi"."""
+        cells = sorted(
+            [c for c in self.cells.values() if c.axis is axis and c.layer == layer],
+            key=lambda c: c.coordinate,
+        )
+        if len(cells) < 2:
+            return 0.0
+        return (cells[-1].activation - cells[0].activation) / (len(cells) - 1)
+
+    def directional_derivative(self, axis: Axis, layer: int) -> float:
         """Ndryshimi i aktivizimit përgjatë aksit — ky është 'drejtimi'.
 
         Për aksin VERTICAL: vlerë pozitive = lart, negative = poshtë.
