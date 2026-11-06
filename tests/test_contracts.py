@@ -28,6 +28,26 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(lattice.contract([Axis.HORIZONTAL, Axis.VERTICAL]), 0.75)
         self.assertEqual(len(lattice.wave_transform(0.2).project(Axis.WAVE)), 2)
 
+    def test_directional_derivative_opposite_directions(self):
+        lat_up = HVWOLattice(1)
+        for i in range(5):
+            lat_up.set(CognitiveCell(0, Axis.VERTICAL, i, float(i)))
+        d_up = lat_up.directional_derivative(Axis.VERTICAL, 0)
+
+        lat_down = HVWOLattice(1)
+        for i in range(5):
+            lat_down.set(CognitiveCell(0, Axis.VERTICAL, i, float(4 - i)))
+        d_down = lat_down.directional_derivative(Axis.VERTICAL, 0)
+
+        self.assertLess(d_up * d_down, 0, "drejtimet duhet të jenë të kundërta")
+        self.assertGreater(d_up, 0, "lart duhet të jetë pozitiv")
+        self.assertLess(d_down, 0, "poshtë duhet të jetë negativ")
+
+    def test_directional_derivative_single_cell_returns_zero(self):
+        lat = HVWOLattice(1)
+        lat.set(CognitiveCell(0, Axis.VERTICAL, 0, 1.0))
+        self.assertEqual(lat.directional_derivative(Axis.VERTICAL, 0), 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
