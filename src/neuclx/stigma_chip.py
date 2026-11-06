@@ -4,7 +4,7 @@ This models the integer semantics declared in OS-CLX `docs/hardware/stigma_cente
 (memory accumulator, momentum engine, V_dpa unit) on unsigned 64-bit words. It is a
 computed software model of a declared design. It is NOT a simulation of the RTL, and it
 says nothing about silicon speed, power or area: those are `not_implemented` until the
-RTL is simulated or synthesised with a real tool.
+RTL is synthesised or measured on hardware.
 """
 
 from __future__ import annotations
