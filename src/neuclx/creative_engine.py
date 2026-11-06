@@ -76,15 +76,10 @@ class ImageGenerator:
 
         bars = []
         for index, value in enumerate((seed % 7 + 1, seed % 5 + 2, seed % 3 + 3)):
-            bars.append(f'<rect x="{
-                    100 +
-                    index *
-                    140}" y="{
-                    290 -
-                    value *
-                    18}" width="70" height="{
-                    value *
-                    18}" rx="8" fill="{accent}" opacity="0.78" />')
+            x = 100 + index * 140
+            y = 290 - value * 18
+            height = value * 18
+            bars.append(f'<rect x="{x}" y="{y}" width="70" height="{height}" rx="8" fill="{accent}" opacity="0.78" />')
 
         prompt_hash = sha256(prompt.encode("utf-8")).hexdigest()[:16]
         return "".join(

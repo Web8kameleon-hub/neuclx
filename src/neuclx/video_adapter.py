@@ -68,18 +68,18 @@ class VideoGenerator:
     def _frame_svg(self, prompt: str, seed: int, style: str, author: str | None, index: int, frame_count: int) -> str:
         palette = ["#10131f", "#17203b", "#2d5b8a", "#8dd3c7", "#ffffb3", "#fb8072"]
         accent = palette[(seed + index) % (len(palette) - 1) + 1]
+        circle_y = 120 + (seed * 7 + index * 11) % 80
+        rectangle_width = 80 + index * 12
+        rectangle_fill = palette[(index + 2) % len(palette)]
         return (
             '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">'
             f'<rect width="640" height="360" fill="{palette[0]}" />'
-            f'<circle cx="{120 + index * 44}" cy="{120 + (seed * 7 + index * 11) %
-                                                   80}" r="{28 + index * 2}" fill="{accent}" opacity="0.88" />'
-            f'<rect x="60" y="260" width="{80 +
-                                           index *
-                                           12}" height="40" rx="10" fill="{palette[(index +
-                                                                                    2) %
-                                                                                   len(palette)]}" opacity="0.7" />'
-            f'<text x="40" y="40" fill="#ffffff" font-family="Consolas, monospace" font-size="16">frame {
-                index + 1}/{frame_count}</text>'
+            f'<circle cx="{120 + index * 44}" cy="{circle_y}" r="{28 + index * 2}" '
+            f'fill="{accent}" opacity="0.88" />'
+            f'<rect x="60" y="260" width="{rectangle_width}" height="40" rx="10" '
+            f'fill="{rectangle_fill}" opacity="0.7" />'
+            f'<text x="40" y="40" fill="#ffffff" font-family="Consolas, monospace" '
+            f'font-size="16">frame {index + 1}/{frame_count}</text>'
             f'<text x="40" y="66" fill="#cfd6ff" font-family="Consolas, monospace" font-size="12">{prompt[:80]}</text>'
             f'<text x="40" y="340" fill="#cfd6ff" font-family="Consolas, monospace" '
             f'font-size="12">seed={seed} style={style} author={author or "unknown"}</text>'

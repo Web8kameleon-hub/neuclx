@@ -650,10 +650,16 @@ class MaliCore:
         correlations = self.intelligence.cross_module_correlation(intake_results)
         for pattern in patterns:
             if pattern.get("severity") == "critical":
-                self.announcements.announce(AnnouncementType.ALERT, AnnouncementPriority.HIGH, f"Critical: {
-                        pattern.get('type')}", f"Value: {
-                        pattern.get('value')}, Threshold: {
-                        pattern.get('threshold')}", "mali_intelligence", pattern)
+                message = f"Critical: {pattern.get('type')}"
+                details = f"Value: {pattern.get('value')}, Threshold: {pattern.get('threshold')}"
+                self.announcements.announce(
+                    AnnouncementType.ALERT,
+                    AnnouncementPriority.HIGH,
+                    message,
+                    details,
+                    "mali_intelligence",
+                    pattern,
+                )
         for correlation in correlations:
             self.announcements.announce(
                 AnnouncementType.INSIGHT,
