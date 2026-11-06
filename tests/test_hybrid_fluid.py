@@ -1,9 +1,8 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import threading
+import unittest
 from urllib.parse import urlparse
-
-import pytest
 
 from neuclx.evidence import EvidenceState
 from neuclx.hybrid_fluid import (
@@ -103,7 +102,7 @@ def start_upstream(*, bad_alphabet=False):
     return server, thread, received
 
 
-def make_pipeline(server, *, jona=None, bad_alphabet=False):
+def make_pipeline(server, *, jona=None):
     origin = f"http://127.0.0.1:{server.server_port}"
     return HybridFluidPipeline(
         jona or JonaSandbox(),
@@ -114,83 +113,90 @@ def make_pipeline(server, *, jona=None, bad_alphabet=False):
     )
 
 
-def test_hybrid_fluid_runs_all_eleven_real_service_stages():
-    server, thread, received = start_upstream()
-    try:
-        pipeline = make_pipeline(server)
-        result = pipeline.run("Kush je ti?")
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
+class HybridFluidTests(unittest.TestCase):
+    def test_runs_all_eleven_real_service_stages(self):
+        server, thread, received = start_upstream()
+        try:
+            pipeline = make_pipeline(server)
+            result = pipeline.run("Kush je ti?")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
 
-    assert result.state is EvidenceState.COMPUTED
-    assert len(result.metadata["stages"]) == 11
-    assert result.metadata["stages"][-1]["name"] == "11-jona-record"
-    assert result.value["wave_indices"]["state"] == "computed"
-    assert result.value["wave_indices"]["metadata"]["interpretation"].startswith("computed indices")
-    assert result.value["megalayer"]["value"]["unique_signature"] == "fixture-signature"
-    assert result.value["fluid_engine"]["value"]["result"]["status"] == "fixture-computed"
-    assert pipeline.ledger.records[0][0] == "Kush je ti?"
-    fluid_request = next(
-        entry[2]
-        for entry in received
-        if len(entry) == 3 and entry[1] == "/api/fluid/execute"
-    )
-    fluid_input = json.loads(fluid_request["inputData"])
-    assert fluid_request["pipelineName"] == "FlowPipeline"
-    assert fluid_input["megalayer"]["value"]["unique_signature"] == "fixture-signature"
+        self.assertEqual(result.state, EvidenceState.COMPUTED)
+        self.assertEqual(len(result.metadata["stages"]), 11)
+        self.assertEqual(result.metadata["stages"][-1]["name"], "11-jona-record")
+        self.assertEqual(result.value["wave_indices"]["state"], "computed")
+        self.assertTrue(
+            result.value["wave_indices"]["metadata"]["interpretation"].startswith("computed indices")
+        )
+        self.assertEqual(result.value["megalayer"]["value"]["unique_signature"], "fixture-signature")
+        self.assertEqual(result.value["fluid_engine"]["value"]["result"]["status"], "fixture-computed")
+        self.assertEqual(pipeline.ledger.records[0][0], "Kush je ti?")
+        fluid_request = next(
+            entry[2]
+            for entry in received
+            if len(entry) == 3 and entry[1] == "/api/fluid/execute"
+        )
+        fluid_input = json.loads(fluid_request["inputData"])
+        self.assertEqual(fluid_request["pipelineName"], "FlowPipeline")
+        self.assertEqual(
+            fluid_input["megalayer"]["value"]["unique_signature"],
+            "fixture-signature",
+        )
 
+    def test_alphabet_contract_mismatch_stops_before_other_engines(self):
+        server, thread, received = start_upstream(bad_alphabet=True)
+        try:
+            pipeline = make_pipeline(server)
+            with self.assertRaisesRegex(AlphabetContractError, "greek_letters=24"):
+                pipeline.run("Kush je ti?")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
 
-def test_alphabet_contract_mismatch_stops_before_processing_other_engines():
-    server, thread, received = start_upstream(bad_alphabet=True)
-    try:
-        pipeline = make_pipeline(server)
-        with pytest.raises(AlphabetContractError, match="greek_letters=24"):
+        paths = [entry[1] for entry in received]
+        self.assertEqual(paths, ["/health", "/api/v1/alphabet/stats"])
+        self.assertNotIn("/process", paths)
+        self.assertNotIn("/api/fluid/execute", paths)
+
+    def test_missing_upstream_configuration_stops_before_network_requests(self):
+        ledger = RecordingLedger()
+        pipeline = HybridFluidPipeline(
+            JonaSandbox(),
+            ledger,
+            alphabet=AlphabetLayerAdapter(),
+            megalayer=MegaLayerAdapter(),
+            fluid=FluidEngineAdapter(),
+        )
+
+        with self.assertRaisesRegex(HybridFluidNotConfigured, "NEUCLX_ALPHABET_URL"):
             pipeline.run("Kush je ti?")
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
 
-    paths = [entry[1] for entry in received]
-    assert paths == ["/health", "/api/v1/alphabet/stats"]
-    assert "/process" not in paths
-    assert "/api/fluid/execute" not in paths
+        self.assertEqual(ledger.records, [])
 
+    def test_jona_rejection_blocks_outbound_service_request(self):
+        server, thread, received = start_upstream()
 
-def test_missing_any_upstream_configuration_stops_before_network_requests():
-    ledger = RecordingLedger()
-    pipeline = HybridFluidPipeline(
-        JonaSandbox(),
-        ledger,
-        alphabet=AlphabetLayerAdapter(),
-        megalayer=MegaLayerAdapter(),
-        fluid=FluidEngineAdapter(),
-    )
+        class RejectOutbound(JonaSandbox):
+            def evaluate(self, datum):
+                if datum.method and datum.method.startswith("http:"):
+                    return PolicyDecision.REJECT
+                return super().evaluate(datum)
 
-    with pytest.raises(HybridFluidNotConfigured, match="NEUCLX_ALPHABET_URL"):
-        pipeline.run("Kush je ti?")
+        try:
+            pipeline = make_pipeline(server, jona=RejectOutbound())
+            with self.assertRaisesRegex(PermissionError, "JONA"):
+                pipeline.run("Kush je ti?")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
 
-    assert ledger.records == []
+        self.assertEqual(received, [])
 
 
-def test_jona_rejection_blocks_outbound_service_request():
-    server, thread, received = start_upstream()
-
-    class RejectOutbound(JonaSandbox):
-        def evaluate(self, datum):
-            if datum.method and datum.method.startswith("http:"):
-                return PolicyDecision.REJECT
-            return super().evaluate(datum)
-
-    try:
-        pipeline = make_pipeline(server, jona=RejectOutbound())
-        with pytest.raises(PermissionError, match="JONA"):
-            pipeline.run("Kush je ti?")
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
-
-    assert received == []
+if __name__ == "__main__":
+    unittest.main()

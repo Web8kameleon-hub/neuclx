@@ -1,6 +1,14 @@
 import hashlib,json
 from pathlib import Path
 ALLOWED={"copy","adapt","reference","reject","unavailable"}
+
+def canonical_content_sha256(content):
+    content=content.replace(b"\r\n",b"\n")
+    return hashlib.sha256(content).hexdigest()
+
+def canonical_sha256(path):
+    return canonical_content_sha256(path.read_bytes())
+
 def validate(root=Path(".")):
     manifest=json.loads((root/"imports/manifest.json").read_text());sources=manifest["sources"];errors=[];repos=set();hashes=set()
     if len(sources)!=16:errors.append(f"expected 16 sources, found {len(sources)}")
@@ -13,7 +21,7 @@ def validate(root=Path(".")):
             path=root/item["destination"]
             if not path.is_file():errors.append(f"missing copied candidate: {path}")
             else:
-                actual=hashlib.sha256(path.read_bytes()).hexdigest()
+                actual=canonical_sha256(path)
                 if actual!=item["sha256"]:errors.append(f"digest mismatch: {path}")
                 if actual in hashes:errors.append(f"duplicate content: {path}")
                 hashes.add(actual)
