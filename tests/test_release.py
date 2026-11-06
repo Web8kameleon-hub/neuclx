@@ -18,7 +18,12 @@ class ReleaseTests(unittest.TestCase):
                 self.assertIn("neuclx/data/normalize.py", wheel.namelist())
                 self.assertIn("neuclx/data/validate.py", wheel.namelist())
             manifest=json.loads((Path(directory)/"neuclx-0.1.0.release-manifest.json").read_text())
-            self.assertEqual(manifest["claims"]["benchmark_status"],"not_measured")
+            self.assertEqual(manifest["claims"]["candidate_status"],"built_pending_attestation")
+            self.assertEqual(manifest["builder"]["provenance_status"],"pending")
+            self.assertNotIn("tag", manifest["git"])
+            self.assertNotIn("tests", manifest["verification"])
+            sbom=json.loads((Path(directory)/"neuclx-0.1.0.sbom.spdx.json").read_text())
+            self.assertIn("/neuclx-candidates/", sbom["documentNamespace"])
 
     def test_tag_and_project_version_must_match(self):
         with tempfile.TemporaryDirectory() as directory:

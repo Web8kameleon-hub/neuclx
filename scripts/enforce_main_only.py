@@ -1,12 +1,10 @@
 """Fail CI/CD for every ref or event that is not a direct main update."""
 
 import os
-import re
 import sys
 
 ALLOWED_REF = "refs/heads/main"
 ALLOWED_EVENT = "push"
-RELEASE_TAG = re.compile(r"^refs/tags/v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$")
 
 
 def validate(ref: str, event: str, head_ref: str = "") -> tuple[bool, str]:
@@ -14,12 +12,10 @@ def validate(ref: str, event: str, head_ref: str = "") -> tuple[bool, str]:
         return False, f"NeuCLX accepts direct main growth only; event {event!r} is forbidden"
     if ref == ALLOWED_REF:
         return True, "NeuCLX single-main-tree policy satisfied"
-    if RELEASE_TAG.fullmatch(ref):
-        return True, "NeuCLX immutable semantic release tag accepted"
     if ref.startswith("refs/heads/"):
         return False, f"NeuCLX is a single tree: branch {ref!r} is forbidden"
     if ref.startswith("refs/tags/"):
-        return False, f"release tag {ref!r} must use exact vMAJOR.MINOR.PATCH syntax"
+        return False, f"NeuCLX accepts only {ALLOWED_REF}; tag {ref!r} is forbidden"
     return False, f"Git ref {ref!r} is forbidden"
 
 

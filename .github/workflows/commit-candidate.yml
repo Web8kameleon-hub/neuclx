@@ -3,8 +3,6 @@ name: NeuCLX Commit Candidate
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -31,13 +29,21 @@ jobs:
           NEUCLX_EVENT: ${{ github.event_name }}
           NEUCLX_HEAD_REF: ${{ github.head_ref }}
         run: python scripts/enforce_main_only.py
-      - name: Python tests and benchmark
+      - name: Python tests (three isolated runs)
         env:
           PYTHONPATH: src:.
         run: |
-          python -m unittest discover -s tests -v
-          python benchmarks/kernel_benchmark.py --output evidence/benchmark.json
-          python scripts/check_service_levels.py --benchmark evidence/benchmark.json --output evidence/service-level-report.json
+          for attempt in 1 2 3; do
+            echo "Python test run ${attempt}/3"
+            python -m unittest discover -s tests -v
+          done
+      - name: Independent benchmarks
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python benchmarks/kernel_benchmark.py --output evidence/kernel-benchmark.json
+          python scripts/check_service_levels.py --benchmark evidence/kernel-benchmark.json --output evidence/service-level-report.json
+          python benchmarks/retrieval_benchmark.py --output evidence/retrieval-benchmark.json
       - name: Build Python candidate
         run: python scripts/build_release.py --version 0.1.0 --commit "${GITHUB_SHA}" --repository "${GITHUB_REPOSITORY}" --run-id "${GITHUB_RUN_ID}" --output candidate/python
       - name: Test and pack npm candidate
@@ -57,7 +63,7 @@ jobs:
       - name: Attach benchmark and policy documents
         run: |
           mkdir -p candidate/evidence candidate/docs
-          cp evidence/benchmark.json maturity.json candidate/evidence/
+          cp evidence/*.json maturity.json candidate/evidence/
           cp docs/*.md candidate/docs/
       - uses: actions/upload-artifact@v7
         with:
