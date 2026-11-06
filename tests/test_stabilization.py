@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
-from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -25,7 +24,8 @@ class SimpleLogicEngineTests(unittest.TestCase):
 
     def test_transfer_word_problem(self):
         solved, answer, confidence = SimpleLogicEngine.detect_and_solve(
-            "If 3 students each have 2 books and one gives 1 book to someone without one, how many books are there in total?"
+            "If 3 students each have 2 books and one gives 1 book to someone without one, "
+            "how many books are there in total?"
         )
         self.assertTrue(solved)
         self.assertEqual(answer, "6")
@@ -71,7 +71,9 @@ class SeedLoaderTests(unittest.TestCase):
     def test_load(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             seed_path = Path(tmpdir) / "seed.json"
-            seed_path.write_text(json.dumps([{"subject": "test", "relation": "is", "object": "value"}]), encoding="utf-8")
+            seed_path.write_text(
+                json.dumps([{"subject": "test", "relation": "is", "object": "value"}]), encoding="utf-8"
+            )
 
             mock_memory = MagicMock()
             mock_memory.semantic.get_all.return_value = []
@@ -89,7 +91,8 @@ class StableReasoningEngineTests(unittest.TestCase):
             memory.store = MagicMock()
             engine = StableReasoningEngine(memory, model_adapter=None, seed_path=str(Path(tmpdir) / "seed.json"))
             result = engine.process(
-                "If 3 students each have 2 books and one gives 1 book to someone without one, how many books are there in total?",
+                "If 3 students each have 2 books and one gives 1 book to someone without one, "
+                "how many books are there in total?",
                 facts=[],
             )
 
@@ -106,9 +109,9 @@ class StableReasoningEngineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             seed_path = Path(tmpdir) / "seed.json"
             seed_path.write_text(
-                json.dumps([
-                    {"subject": "JONA", "relation": "is", "object": "guardrail", "confidence": 1.0, "source": "seed"}
-                ]),
+                json.dumps(
+                    [{"subject": "JONA", "relation": "is", "object": "guardrail", "confidence": 1.0, "source": "seed"}]
+                ),
                 encoding="utf-8",
             )
             memory = MagicMock()

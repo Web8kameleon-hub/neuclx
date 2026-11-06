@@ -13,7 +13,6 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 from .evidence import Datum, EvidenceState
 from .jona import JonaSandbox
 
-
 UPSTREAM_REVISION = "f120457ab2c38c5bac9d23b62fca5d4ea6f17a0e"
 _MAX_RESPONSE_BYTES = 1_000_000
 
@@ -126,9 +125,7 @@ class MegaLayerAdapter:
         }
         missing = required - payload.keys()
         if missing:
-            raise MegaLayerError(
-                "MegaLayer response is missing fields: " + ", ".join(sorted(missing))
-            )
+            raise MegaLayerError("MegaLayer response is missing fields: " + ", ".join(sorted(missing)))
 
         signature = payload["unique_signature"]
         counts = (

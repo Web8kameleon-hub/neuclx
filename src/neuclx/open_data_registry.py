@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -160,6 +160,10 @@ class OpenDataRegistry:
         lowered = (query or "").casefold()
         matches: list[dict[str, Any]] = []
         for source in self._sources:
-            if lowered in source.name.casefold() or lowered in source.source_type.casefold() or lowered in source.region.casefold():
+            if (
+                lowered in source.name.casefold()
+                or lowered in source.source_type.casefold()
+                or lowered in source.region.casefold()
+            ):
                 matches.append(source.as_dict())
         return matches

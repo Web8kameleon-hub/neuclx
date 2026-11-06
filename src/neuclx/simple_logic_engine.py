@@ -165,7 +165,10 @@ class SimpleLogicEngine:
             return None
 
         quantity = numbers[0] * numbers[1]
-        if any(token in lowered for token in ["give", "gives", "gave", "transfer", "transferred", "jep", "jepet", "dhuron", "dhuroi"]):
+        if any(
+            token in lowered
+            for token in ["give", "gives", "gave", "transfer", "transferred", "jep", "jepet", "dhuron", "dhuroi"]
+        ):
             return str(quantity)
         if any(token in lowered for token in ["each", "secili", "çdo"]):
             return str(quantity)
@@ -175,7 +178,9 @@ class SimpleLogicEngine:
     def _solve_syllogism(text: str) -> Optional[str]:
         normalized = re.sub(r"\s+", " ", text.strip())
         patterns = [
-            re.compile(r"(?:all|every|të gjithë)\s+(\w+)\s+(?:are|janë)\s+(\w+).+?(\w+)\s+(?:is|është)\s+\1", re.IGNORECASE),
+            re.compile(
+                r"(?:all|every|të gjithë)\s+(\w+)\s+(?:are|janë)\s+(\w+).+?(\w+)\s+(?:is|është)\s+\1", re.IGNORECASE
+            ),
             re.compile(r"(?:if|nëse)\s+(\w+)\s+(?:are|janë)\s+(\w+).+?(\w+)\s+(?:is|është)\s+\1", re.IGNORECASE),
         ]
         for pattern in patterns:

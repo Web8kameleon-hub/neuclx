@@ -20,7 +20,9 @@ def validate(ref: str, event: str, head_ref: str = "") -> tuple[bool, str]:
 
 
 def main() -> int:
-    ok, message = validate(os.environ.get("NEUCLX_GIT_REF", ""), os.environ.get("NEUCLX_EVENT", ""), os.environ.get("NEUCLX_HEAD_REF", ""))
+    ok, message = validate(
+        os.environ.get("NEUCLX_GIT_REF", ""), os.environ.get("NEUCLX_EVENT", ""), os.environ.get("NEUCLX_HEAD_REF", "")
+    )
     print(message)
     return 0 if ok else 1
 

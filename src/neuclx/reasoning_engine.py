@@ -171,7 +171,9 @@ class ReasoningEngine:
         )
         return self.model.generate(prompt)
 
-    def reason(self, task: str, context: str | Iterable[str] | None = None, *, max_iterations: int = 5) -> dict[str, Any]:
+    def reason(
+        self, task: str, context: str | Iterable[str] | None = None, *, max_iterations: int = 5
+    ) -> dict[str, Any]:
         task_text = (task or "").strip()
         if not task_text:
             raise ValueError("task is required")
@@ -186,7 +188,10 @@ class ReasoningEngine:
         trace.evidence_path = raw_context[:]
 
         if not evidence_pool:
-            no_evidence = "Nuk ka evidencë të disponueshme për këtë pyetje; sistemi duhet të mbetet i kufizuar nga kontrolli i evidencës dhe jo të bënte supozime."
+            no_evidence = (
+                "Nuk ka evidencë të disponueshme për këtë pyetje; sistemi duhet të mbetet i kufizuar "
+                "nga kontrolli i evidencës dhe jo të bënte supozime."
+            )
             trace.conclusion = no_evidence
             trace.confidence = 0.0
             trace.steps = [
@@ -291,14 +296,22 @@ class ReasoningEngine:
             step.hypothesis = str(step_result["hypothesis"])
             step.confidence = float(step_result["confidence"])
             step.evidence = [str(item) for item in step_result["evidence"]]
-            step.status = StepStatus.SUCCESS if self._validate_step(task_text, step.hypothesis, evidence_pool) else StepStatus.FAILED
+            step.status = (
+                StepStatus.SUCCESS
+                if self._validate_step(task_text, step.hypothesis, evidence_pool)
+                else StepStatus.FAILED
+            )
             if step.status is StepStatus.FAILED:
                 lateral = self._lateral_shift(task_text, step, evidence_pool)
                 if lateral["confidence"] > step.confidence:
                     step.hypothesis = lateral["hypothesis"]
                     step.confidence = lateral["confidence"]
                     step.reasoning_type = ReasoningType.LATERAL
-                    step.status = StepStatus.SUCCESS if self._validate_step(task_text, step.hypothesis, evidence_pool) else StepStatus.FAILED
+                    step.status = (
+                        StepStatus.SUCCESS
+                        if self._validate_step(task_text, step.hypothesis, evidence_pool)
+                        else StepStatus.FAILED
+                    )
                 if step.status is StepStatus.FAILED:
                     step.error = "Evidence validation failed."
             trace.steps.append(step)
@@ -313,7 +326,9 @@ class ReasoningEngine:
             conclusion = simple["hypothesis"]
             trace.confidence = simple["confidence"]
         else:
-            trace.confidence = max((step.confidence for step in trace.steps if step.status is StepStatus.SUCCESS), default=0.0)
+            trace.confidence = max(
+                (step.confidence for step in trace.steps if step.status is StepStatus.SUCCESS), default=0.0
+            )
         trace.conclusion = conclusion
         self.traces.append(trace)
 
@@ -396,9 +411,39 @@ class ReasoningEngine:
 
         task_terms = self._tokenize(task)
         stop_words = {
-            "a", "ajo", "ata", "b", "c", "çfarë", "dhe", "edhe", "e", "je", "ka", "kur",
-            "kush", "me", "në", "nga", "pse", "si", "sot", "të", "ti", "u", "y", "është", "ç",
-            "cila", "cilin", "cilat", "cilën", "cili", "kjo", "këtë", "që"
+            "a",
+            "ajo",
+            "ata",
+            "b",
+            "c",
+            "çfarë",
+            "dhe",
+            "edhe",
+            "e",
+            "je",
+            "ka",
+            "kur",
+            "kush",
+            "me",
+            "në",
+            "nga",
+            "pse",
+            "si",
+            "sot",
+            "të",
+            "ti",
+            "u",
+            "y",
+            "është",
+            "ç",
+            "cila",
+            "cilin",
+            "cilat",
+            "cilën",
+            "cili",
+            "kjo",
+            "këtë",
+            "që",
         }
         keywords = [term for term in task_terms if len(term) > 2 and term not in stop_words]
         if not keywords:
@@ -419,7 +464,7 @@ class ReasoningEngine:
             tokens = [term for term in self._tokenize(text) if len(term) > 2]
             for index, token in enumerate(tokens):
                 graph[token]
-                for other in tokens[index + 1:]:
+                for other in tokens[index + 1 :]:
                     if len(other) > 2:
                         graph[token].add(other)
                         graph[other].add(token)
@@ -430,13 +475,18 @@ class ReasoningEngine:
         if not locked:
             return "Nuk ka konkluzion të verifikuar bazuar në evidencë."
         if any(token in task.casefold() for token in ["jona", "sandbox", "policy", "evidence"]):
-            return "JONA e bën kufirin e policy-s: çdo përfundim duhet të jetë i bazuar në evidencë të kontrolluar ose të jetë e pa-verifikuar dhe jo publike."
+            return (
+                "JONA e bën kufirin e policy-s: çdo përfundim duhet të jetë i bazuar në evidencë të kontrolluar "
+                "ose të jetë e pa-verifikuar dhe jo publike."
+            )
         return locked
 
     def _persist_reasoning_trace(self, task: str, conclusion: str, facts: list[str]) -> None:
         if not self.memory:
             return
-        payload = json.dumps({"task": task, "conclusion": conclusion, "facts": facts[:5]}, ensure_ascii=False, sort_keys=True)
+        payload = json.dumps(
+            {"task": task, "conclusion": conclusion, "facts": facts[:5]}, ensure_ascii=False, sort_keys=True
+        )
         entry = MemoryEntry(
             key=f"reason:{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}",
             content=payload,
@@ -509,22 +559,43 @@ class ReasoningEngine:
 
         lowered = task.casefold()
         if "jona" in lowered or "sandbox" in lowered:
-            evidence = [fact for fact in facts if "jona" in fact.casefold() or "sandbox" in fact.casefold() or "policy" in fact.casefold()]
+            evidence = [
+                fact
+                for fact in facts
+                if "jona" in fact.casefold() or "sandbox" in fact.casefold() or "policy" in fact.casefold()
+            ]
             if evidence:
-                hypothesis = "JONA është kufiri i policy-s dhe sandbox-it: çdo dalje e verifikuar duhet të kalojë kontrollin e evidencës para se të përfundojë në përgjigje publike."
+                hypothesis = (
+                    "JONA është kufiri i policy-s dhe sandbox-it: çdo dalje e verifikuar duhet të kalojë "
+                    "kontrollin e evidencës para se të përfundojë në përgjigje publike."
+                )
                 return {"hypothesis": hypothesis, "confidence": 0.9, "evidence": evidence[:3]}
         if not facts:
-            return {"hypothesis": "Nuk ka evidencë të mjaftueshme për një konkluzion të sigurt; mbetet në fazën e shqyrtimit.", "confidence": 0.35, "evidence": []}
-        hypothesis = "Nga faktet e disponueshme, konkluzioni i mëtejshëm rrjedh nga pamja e plotë e evidencës dhe nga kontrolli i bllokimit të deklaratave të pa-verified." 
+            return {
+                "hypothesis": (
+                    "Nuk ka evidencë të mjaftueshme për një konkluzion të sigurt; " "mbetet në fazën e shqyrtimit."
+                ),
+                "confidence": 0.35,
+                "evidence": [],
+            }
+        hypothesis = (
+            "Nga faktet e disponueshme, konkluzioni i mëtejshëm rrjedh nga pamja e plotë e evidencës "
+            "dhe nga kontrolli i bllokimit të deklaratave të pa-verified."
+        )
         return {"hypothesis": hypothesis, "confidence": 0.8, "evidence": facts[:3]}
 
     def _inductive_inference(self, task: str, facts: list[str]) -> dict[str, Any]:
         if not facts:
-            return {"hypothesis": "Përgjithësimi është i kufizuar sepse nuk ka prova të mjaftueshme të kontrolluara.", "confidence": 0.3, "evidence": []}
+            return {
+                "hypothesis": "Përgjithësimi është i kufizuar sepse nuk ka prova të mjaftueshme të kontrolluara.",
+                "confidence": 0.3,
+                "evidence": [],
+            }
         evidence = facts[:3]
         pattern = "; ".join(evidence)
         hypothesis = (
-            "Nëse të dhënat e marra në mënyrë të kontrolluar tregojnë një model të njëjtë, rezultati më i mirë është të bazosh përgjigjen "
+            "Nëse të dhënat e marra në mënyrë të kontrolluar tregojnë një model të njëjtë, "
+            "rezultati më i mirë është të bazosh përgjigjen "
             f"në modelin e evidencës, jo në supozime. Modeli i vëzhguar është: {pattern}"
         )
         return {"hypothesis": hypothesis, "confidence": 0.78, "evidence": evidence}
@@ -532,19 +603,34 @@ class ReasoningEngine:
     def _convergent_inference(self, task: str, facts: list[str]) -> dict[str, Any]:
         if facts:
             final = facts[0]
-            return {"hypothesis": f"Zgjidhja më e dobishme është të përdoret faktori më i fortë i evidencës: {final}", "confidence": 0.82, "evidence": facts[:2]}
-        return {"hypothesis": "Nuk ekziston një zgjedhje e besueshme pa evidencë të disponueshme.", "confidence": 0.25, "evidence": []}
+            return {
+                "hypothesis": f"Zgjidhja më e dobishme është të përdoret faktori më i fortë i evidencës: {final}",
+                "confidence": 0.82,
+                "evidence": facts[:2],
+            }
+        return {
+            "hypothesis": "Nuk ekziston një zgjedhje e besueshme pa evidencë të disponueshme.",
+            "confidence": 0.25,
+            "evidence": [],
+        }
 
     def _lateral_shift(self, task: str, step: ReasoningStep, facts: list[str]) -> dict[str, Any]:
         alternative_parts = []
         for fact in facts:
-            if "evidence" in fact.casefold() or "policy" in fact.casefold() or "sandbox" in fact.casefold() or "bridge" in fact.casefold():
+            if (
+                "evidence" in fact.casefold()
+                or "policy" in fact.casefold()
+                or "sandbox" in fact.casefold()
+                or "bridge" in fact.casefold()
+            ):
                 alternative_parts.append(fact)
         if not alternative_parts:
             alternative_parts = facts[:2]
         hypothesis = (
-            "Rruga alternative është të shohësh problemin si kontroll të kufizimeve në vend të një përgjigjeje të drejtpërdrejtë: "
-            "nëse evidenca nuk mbështet deklaratën, sistemi duhet të mbetet në mode të qetë, të verifikuar dhe të kufizuar."
+            "Rruga alternative është të shohësh problemin si kontroll të kufizimeve në vend të një përgjigjeje "
+            "të drejtpërdrejtë: "
+            "nëse evidenca nuk mbështet deklaratën, sistemi duhet të mbetet "
+            "në mode të qetë, të verifikuar dhe të kufizuar."
         )
         return {"hypothesis": hypothesis, "confidence": 0.61, "evidence": alternative_parts[:3]}
 
@@ -579,12 +665,19 @@ class ReasoningEngine:
         if simple is not None:
             return simple["hypothesis"]
         if "jona" in task.casefold() or "sandbox" in task.casefold() or "policy" in task.casefold():
-            return "JONA është kufiri i sigurisë së NeuCLX: ai rregullon çfarë lejohet të dalë jashtë sistemit dhe detyron çdo përgjigje të jetë e bazuar në evidencë të kontrolluar."
+            return (
+                "JONA është kufiri i sigurisë së NeuCLX: ai rregullon çfarë lejohet të dalë jashtë sistemit "
+                "dhe detyron çdo përgjigje të jetë e bazuar në evidencë të kontrolluar."
+            )
         return summary[:800]
 
     def _compose_hypothesis(self, task: str, support: list[str], mode: str) -> str:
         details = "; ".join(support[:3])
-        return f"Bazuar në pyetjen '{task}', mode={mode}, dhe evidencat e disponueshme ({details}), hipoteza më e fortë është që përgjigja duhet të mbështetet në kontrollin e evidencës dhe jo në supozime të pa-verifikuara."
+        return (
+            f"Bazuar në pyetjen '{task}', mode={mode}, dhe evidencat e disponueshme ({details}), "
+            "hipoteza më e fortë është që përgjigja duhet të mbështetet në kontrollin e evidencës "
+            "dhe jo në supozime të pa-verifikuara."
+        )
 
     def _solve_simple_numeric_logic(self, task: str, facts: list[str]) -> dict[str, Any] | None:
         lowered = (task or "").casefold()
@@ -602,8 +695,10 @@ class ReasoningEngine:
         total_books = student_count * books_per_student
 
         statement = (
-            f"Ka {student_count} studentë me {books_per_student} libra secili, pra {student_count} × {books_per_student} = {total_books}. "
-            f"Një libër i dhënë nga një student te tjetri nuk e ndryshon shumën totale, kështu që përgjigja është {total_books} libra."
+            f"Ka {student_count} studentë me {books_per_student} libra secili, "
+            f"pra {student_count} × {books_per_student} = {total_books}. "
+            f"Një libër i dhënë nga një student te tjetri nuk e ndryshon shumën totale, "
+            f"kështu që përgjigja është {total_books} libra."
         )
         return {
             "hypothesis": statement,

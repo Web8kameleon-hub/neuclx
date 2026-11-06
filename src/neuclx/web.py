@@ -6,7 +6,6 @@ from datetime import UTC, datetime
 from hashlib import sha256
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import json
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -31,15 +30,16 @@ from .cited_answer import CITATION_INSTRUCTION, enforce, numbered_context, refus
 
 HYBRID_EXCERPTS = 5
 
-STATIC=Path(__file__).with_name("static")
-MIME={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8"}
+STATIC = Path(__file__).with_name("static")
+MIME = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8"}
+
 
 class NeuCLXApplication:
     def __init__(self, ledger_path="data/neuclx.sqlite3"):
         ledger_path = str(ledger_path)
-        self.kernel=CognitiveKernel(layers=8)
-        self.learning = LearningStore(str(Path(ledger_path).with_name(Path(ledger_path).stem + '_learning.sqlite3')))
-        self.ledger=JourneyLedger(ledger_path)
+        self.kernel = CognitiveKernel(layers=8)
+        self.learning = LearningStore(str(Path(ledger_path).with_name(Path(ledger_path).stem + "_learning.sqlite3")))
+        self.ledger = JourneyLedger(ledger_path)
         memory_path = str(Path(ledger_path).with_name(Path(ledger_path).stem + "_memory.sqlite3"))
         self.memory = EvidenceMemory(memory_path)
         stable_memory_path = str(Path(ledger_path).with_name(Path(ledger_path).stem + "_stable_memory.sqlite3"))
@@ -63,7 +63,16 @@ class NeuCLXApplication:
             "hvo_axes": [axis.value for axis in Axis],
             "saas_api": {
                 "enabled": True,
-                "endpoints": ["/api/status", "/api/agents", "/api/reason", "/api/respond", "/api/registry", "/api/platform", "/api/vision/inspect", "/api/create"],
+                "endpoints": [
+                    "/api/status",
+                    "/api/agents",
+                    "/api/reason",
+                    "/api/respond",
+                    "/api/registry",
+                    "/api/platform",
+                    "/api/vision/inspect",
+                    "/api/create",
+                ],
             },
             "creative": {
                 "enabled": True,
@@ -163,11 +172,7 @@ class NeuCLXApplication:
             result = Datum(answer.value, answer.state, answer.source, answer.method, metadata)
             return self.reasoning_engine.jona.release(result)
         evidence_chain = [*metadata.get("evidence_chain", []), *hits]
-        excerpts = [
-            f"[{hit['source']}]\n{hit['excerpt']}"
-            for hit in evidence_chain
-            if hit.get("excerpt")
-        ]
+        excerpts = [f"[{hit['source']}]\n{hit['excerpt']}" for hit in evidence_chain if hit.get("excerpt")]
         result = Datum(
             "\n\n".join(excerpts),
             EvidenceState.DECLARED,
@@ -185,8 +190,8 @@ class NeuCLXApplication:
     def respond(self, prompt, facts=(), source_urls=None):
         fact_list = [fact.strip() for fact in (facts or ()) if isinstance(fact, str) and fact.strip()]
         for fact in fact_list:
-            digest = sha256(fact.encode('utf-8')).hexdigest()
-            self.learning.ingest('chat:user-declared:' + digest, 'sha256:' + digest, fact)
+            digest = sha256(fact.encode("utf-8")).hexdigest()
+            self.learning.ingest("chat:user-declared:" + digest, "sha256:" + digest, fact)
         hits, web_report = self._read_web_sources(prompt, source_urls)
         answer = self._attach_web_evidence(self.learning.answer(prompt), hits, web_report)
         if self.model_adapter.enabled:
@@ -231,11 +236,7 @@ class NeuCLXApplication:
         if mode == "hybrid-fluid":
             if not isinstance(facts, (list, tuple)):
                 raise TypeError("facts must be a list of strings")
-            fact_list = [
-                fact.strip()
-                for fact in (facts or [])
-                if isinstance(fact, str) and fact.strip()
-            ]
+            fact_list = [fact.strip() for fact in (facts or []) if isinstance(fact, str) and fact.strip()]
             web_hits, web_report = self._read_web_sources(task_text, source_urls, HYBRID_EXCERPTS)
             learned_count = self.self_learning.learn_web_hits(web_hits)
             result = self.hybrid_fluid.run(task_text, fact_list)
@@ -317,7 +318,12 @@ class NeuCLXApplication:
                 "web_sources": web_report,
                 "learned_excerpts": learned_count,
                 "self_memory": (
-                    {"stone": memory["stone"]["number"], "stigma_frame": memory["stone"]["stigma_frame"], "grounding": memory["grounding"], "novelty": memory["novelty"]}
+                    {
+                        "stone": memory["stone"]["number"],
+                        "stigma_frame": memory["stone"]["stigma_frame"],
+                        "grounding": memory["grounding"],
+                        "novelty": memory["novelty"],
+                    }
                     if memory is not None
                     else None
                 ),
@@ -330,15 +336,12 @@ class NeuCLXApplication:
             task_text,
             [
                 *fact_list,
-                *(
-                    f"[{hit['source']}]\n{hit['excerpt']}"
-                    for hit in web_hits
-                    if hit.get("excerpt")
-                ),
+                *(f"[{hit['source']}]\n{hit['excerpt']}" for hit in web_hits if hit.get("excerpt")),
             ],
         )
         if not fact_list:
             from .simple_logic_engine import SimpleLogicEngine
+
             is_simple, simple_answer, simple_confidence = SimpleLogicEngine.detect_and_solve(task_text)
             if is_simple and simple_answer is not None:
                 computed = Datum(
@@ -356,45 +359,56 @@ class NeuCLXApplication:
                 computed = self.reasoning_engine.jona.release(computed)
                 stored = self.ledger.record(task_text, computed)
                 return {
-                    'task': task_text,
-                    'intent': 'arithmetic.word_problem',
-                    'state': 'computed',
-                    'conclusion': simple_answer,
-                    'confidence': simple_confidence,
-                    'confidence_state': 'computed',
-                    'evidence_path': [],
-                    'evidence_chain': [],
-                    'trace': {'steps': [{'reasoning_type': 'symbolic', 'status': 'success', 'hypothesis': simple_answer}]},
-                    'status': 'ok',
-                    'ledger': stored,
-                    'megalayer': megalayer,
-                    'evidence_chain': web_hits,
-                    'web_sources': web_report,
-                    'assistant_response': assistant_response.as_dict(),
+                    "task": task_text,
+                    "intent": "arithmetic.word_problem",
+                    "state": "computed",
+                    "conclusion": simple_answer,
+                    "confidence": simple_confidence,
+                    "confidence_state": "computed",
+                    "evidence_path": [],
+                    "trace": {
+                        "steps": [{"reasoning_type": "symbolic", "status": "success", "hypothesis": simple_answer}]
+                    },
+                    "status": "ok",
+                    "ledger": stored,
+                    "megalayer": megalayer,
+                    "evidence_chain": web_hits,
+                    "web_sources": web_report,
+                    "assistant_response": assistant_response.as_dict(),
                 }
             evidence = self._attach_web_evidence(self.learning.answer(task_text), web_hits, web_report)
             stored = self.ledger.record(task_text, evidence)
-            return {'task': task_text, 'intent': 'document-retrieval', 'state': evidence.state.value,
-                    'conclusion': evidence.value or 'Nuk ka evidencë të disponueshme për këtë pyetje.',
-                    'confidence': None, 'confidence_state': evidence.state.value,
-                    'evidence_path': [hit['source'] for hit in evidence.metadata.get('evidence_chain', [])],
-                    'evidence_chain': evidence.metadata.get('evidence_chain', []),
-                    'trace': {'steps': []}, 'status': 'ok', 'ledger': stored,
-                    'megalayer': megalayer, 'web_sources': web_report,
-                    'assistant_response': assistant_response.as_dict()}
-        result = self.reasoning_engine.reason(task_text, fact_list, max_iterations=max_iterations)
-        conclusion = self.reasoning_engine.jona.release(Datum(
-            result["conclusion"],
-            EvidenceState.COMPUTED if result["status"] == "ok" else EvidenceState.UNAVAILABLE,
-            source="reasoning_engine",
-            method="reasoning:api",
-            metadata={
-                "intent": result["intent"],
-                "confidence": result["confidence"],
-                "evidence_chain": web_hits,
+            return {
+                "task": task_text,
+                "intent": "document-retrieval",
+                "state": evidence.state.value,
+                "conclusion": evidence.value or "Nuk ka evidencë të disponueshme për këtë pyetje.",
+                "confidence": None,
+                "confidence_state": evidence.state.value,
+                "evidence_path": [hit["source"] for hit in evidence.metadata.get("evidence_chain", [])],
+                "evidence_chain": evidence.metadata.get("evidence_chain", []),
+                "trace": {"steps": []},
+                "status": "ok",
+                "ledger": stored,
+                "megalayer": megalayer,
                 "web_sources": web_report,
-            },
-        ))
+                "assistant_response": assistant_response.as_dict(),
+            }
+        result = self.reasoning_engine.reason(task_text, fact_list, max_iterations=max_iterations)
+        conclusion = self.reasoning_engine.jona.release(
+            Datum(
+                result["conclusion"],
+                EvidenceState.COMPUTED if result["status"] == "ok" else EvidenceState.UNAVAILABLE,
+                source="reasoning_engine",
+                method="reasoning:api",
+                metadata={
+                    "intent": result["intent"],
+                    "confidence": result["confidence"],
+                    "evidence_chain": web_hits,
+                    "web_sources": web_report,
+                },
+            )
+        )
         stored = self.ledger.record(
             task_text,
             conclusion,
@@ -418,13 +432,22 @@ class NeuCLXApplication:
             "assistant_response": assistant_response.as_dict(),
         }
 
-    def inspect_vision(self, image_path: str | None = None, image_bytes_b64: str | None = None, *, author: str | None = None, task: str | None = None):
+    def inspect_vision(
+        self,
+        image_path: str | None = None,
+        image_bytes_b64: str | None = None,
+        *,
+        author: str | None = None,
+        task: str | None = None,
+    ):
         if not image_path and not image_bytes_b64:
             raise ValueError("image_path or image_bytes_b64 is required")
         if image_path:
             datum = self.vision_encoder.inspect_path(image_path, author=author, task=task)
         else:
-            datum = self.vision_encoder.inspect_base64(image_bytes_b64 or "", source="inline-base64", author=author, task=task)
+            datum = self.vision_encoder.inspect_base64(
+                image_bytes_b64 or "", source="inline-base64", author=author, task=task
+            )
         stored = self.ledger.record(task or f"inspect image: {image_path or 'inline-base64'}", datum)
         if datum.state.value in {"measured", "computed"}:
             self.memory.store(self.memory._entry_from_datum(datum))
@@ -439,11 +462,19 @@ class NeuCLXApplication:
             "ledger": stored,
         }
 
+
 def handler_factory(app):
     class Handler(BaseHTTPRequestHandler):
-        server_version="NeuCLX/0.1"
-        def _json(self,payload,status=HTTPStatus.OK):
-            body=json.dumps(payload,ensure_ascii=False,sort_keys=True).encode(); self.send_response(status); self.send_header("Content-Type","application/json; charset=utf-8"); self.send_header("Content-Length",str(len(body))); self.send_header("Cache-Control","no-store"); self.end_headers(); self.wfile.write(body)
+        server_version = "NeuCLX/0.1"
+
+        def _json(self, payload, status=HTTPStatus.OK):
+            body = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
 
         def _parse_json_body(self):
             length = int(self.headers.get("Content-Length", "0"))
@@ -513,7 +544,9 @@ def handler_factory(app):
                 raise ValueError("author must be a string")
             if task is not None and not isinstance(task, str):
                 raise ValueError("task must be a string")
-            return app.inspect_vision(image_path=image_path, image_bytes_b64=image_bytes_b64, author=author, task=(task or "").strip() or None)
+            return app.inspect_vision(
+                image_path=image_path, image_bytes_b64=image_bytes_b64, author=author, task=(task or "").strip() or None
+            )
 
         def _handle_create_request(self, payload):
             prompt = payload.get("prompt", "")
@@ -587,8 +620,8 @@ def handler_factory(app):
             return self._json({"error": "not_found"}, HTTPStatus.NOT_FOUND)
 
         def do_GET(self):
-            parsed=urlparse(self.path)
-            if parsed.path == '/api/learning':
+            parsed = urlparse(self.path)
+            if parsed.path == "/api/learning":
                 return self._json(app.learning.status().as_dict())
             if parsed.path in {"/api/journey", "/api/v1/journey"}:
                 try:
@@ -599,8 +632,12 @@ def handler_factory(app):
                 query = parse_qs(parsed.query)
                 search = query.get("query", [""])[0].strip()
                 if search:
-                    return self._json({"sources": app.source_registry.find(search), "summary": app.source_registry.summary()})
-                return self._json({"sources": app.source_registry.list_sources(), "summary": app.source_registry.summary()})
+                    return self._json(
+                        {"sources": app.source_registry.find(search), "summary": app.source_registry.summary()}
+                    )
+                return self._json(
+                    {"sources": app.source_registry.list_sources(), "summary": app.source_registry.summary()}
+                )
             if parsed.path in {"/api/platform", "/api/v1/platform"}:
                 return self._json(app.platform_profile)
             if parsed.path in {"/api/agents", "/api/v1/agents"}:
@@ -612,7 +649,15 @@ def handler_factory(app):
                 except ValueError as exc:
                     return self._json({"error": "invalid_request", "detail": str(exc)}, HTTPStatus.BAD_REQUEST)
             if parsed.path in {"/api/status", "/api/v1/status"}:
-                return self._json({"status": "ok", "app": "neuclx", "version": "0.1.0", "layers": app.kernel.layers, "multilingual": True})
+                return self._json(
+                    {
+                        "status": "ok",
+                        "app": "neuclx",
+                        "version": "0.1.0",
+                        "layers": app.kernel.layers,
+                        "multilingual": True,
+                    }
+                )
             if parsed.path in {"/api/reason", "/api/v1/reason"}:
                 query = parse_qs(parsed.query)
                 task = query.get("task", query.get("question", [""]))[0]
@@ -638,14 +683,33 @@ def handler_factory(app):
                     return self._json({"error": "invalid_request", "detail": str(exc)}, HTTPStatus.BAD_REQUEST)
             if parsed.path in {"/api/stable-status", "/api/v1/stable-status"}:
                 return self._json(app.stable_reasoning_engine.get_clean_reasoning_score())
-            relative="index.html" if parsed.path=="/" else parsed.path.lstrip("/")
-            if relative not in {"index.html","app.css","app.js"}: return self._json({"error":"not_found"},HTTPStatus.NOT_FOUND)
-            path=STATIC/relative; body=path.read_bytes(); self.send_response(200); self.send_header("Content-Type",MIME[path.suffix]); self.send_header("Content-Length",str(len(body))); self.end_headers(); self.wfile.write(body)
-        def log_message(self,format,*args): return
+            relative = "index.html" if parsed.path == "/" else parsed.path.lstrip("/")
+            if relative not in {"index.html", "app.css", "app.js"}:
+                return self._json({"error": "not_found"}, HTTPStatus.NOT_FOUND)
+            path = STATIC / relative
+            body = path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", MIME[path.suffix])
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):
+            return
+
     return Handler
 
-def main(argv=None):
-    parser=ArgumentParser(); parser.add_argument("--host",default="127.0.0.1"); parser.add_argument("--port",type=int,default=8787); parser.add_argument("--ledger",default="data/neuclx.sqlite3"); args=parser.parse_args(argv)
-    server=ThreadingHTTPServer((args.host,args.port),handler_factory(NeuCLXApplication(args.ledger))); print(f"NeuCLX: http://{args.host}:{args.port}"); server.serve_forever()
 
-if __name__=="__main__": main()
+def main(argv=None):
+    parser = ArgumentParser()
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8787)
+    parser.add_argument("--ledger", default="data/neuclx.sqlite3")
+    args = parser.parse_args(argv)
+    server = ThreadingHTTPServer((args.host, args.port), handler_factory(NeuCLXApplication(args.ledger)))
+    print(f"NeuCLX: http://{args.host}:{args.port}")
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

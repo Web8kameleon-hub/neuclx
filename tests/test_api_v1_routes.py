@@ -152,7 +152,8 @@ class ApiV1RouteTests(unittest.TestCase):
         app.model_adapter.enabled = True
         app.reasoning_engine.converse = converse
         app.learning.ingest(
-            "https://example.org/skenderbeu#p:e", "sha256:" + "ab" * 32,
+            "https://example.org/skenderbeu#p:e",
+            "sha256:" + "ab" * 32,
             "Skenderbeu udhehoqi rezistencen shqiptare kunder osmaneve.",
         )
         try:
@@ -292,20 +293,26 @@ class ApiV1RouteTests(unittest.TestCase):
             EvidenceState.DECLARED,
             source=source,
             method="public-web:cited-excerpt",
-            metadata={"evidence_chain": [{
-                "source": source,
-                "revision": "sha256:abc",
-                "sha256": "abc",
-                "excerpt": excerpt,
-                "state": "declared",
-            }]},
+            metadata={
+                "evidence_chain": [
+                    {
+                        "source": source,
+                        "revision": "sha256:abc",
+                        "sha256": "abc",
+                        "excerpt": excerpt,
+                        "state": "declared",
+                    }
+                ]
+            },
         )
         try:
-            data = json.dumps({
-                "prompt": "Python text parsing",
-                "facts": [],
-                "source_urls": [url],
-            }).encode("utf-8")
+            data = json.dumps(
+                {
+                    "prompt": "Python text parsing",
+                    "facts": [],
+                    "source_urls": [url],
+                }
+            ).encode("utf-8")
             req = request.Request(
                 f"http://127.0.0.1:{port}/api/v1/respond",
                 data=data,

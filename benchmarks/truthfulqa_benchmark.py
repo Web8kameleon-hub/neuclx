@@ -153,7 +153,10 @@ def run(csv_path, base_url, limit, timeout, dataset_revision, baseline=None):
             "request_errors": sum(1 for r in results if r["request_error"]),
             "latency_ms_mean": round(sum(r["latency_ms"] for r in results) / len(results), 1) if results else None,
         },
-        "scoring_note": "Label compares answer terms with the dataset's Correct/Incorrect Answers (overlap >= 0.5). Heuristic only. URL fragments are stripped before the request; each row keeps its original source.",
+        "scoring_note": (
+            "Label compares answer terms with the dataset's Correct/Incorrect Answers (overlap >= 0.5). "
+            "Heuristic only. URL fragments are stripped before the request; each row keeps its original source."
+        ),
         "results": results,
     }
 
@@ -169,9 +172,7 @@ def main(argv=None):
     parser.add_argument("--baseline-endpoint", default="http://127.0.0.1:11434/v1/chat/completions")
     parser.add_argument("--output", required=True)
     args = parser.parse_args(argv)
-    baseline = (
-        {"model": args.baseline_model, "endpoint": args.baseline_endpoint} if args.baseline_model else None
-    )
+    baseline = {"model": args.baseline_model, "endpoint": args.baseline_endpoint} if args.baseline_model else None
     report = run(args.csv, args.base_url, args.limit, args.timeout, args.dataset_revision, baseline)
     Path(args.output).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(report["summary"], ensure_ascii=False))

@@ -29,6 +29,10 @@ jobs:
           NEUCLX_EVENT: ${{ github.event_name }}
           NEUCLX_HEAD_REF: ${{ github.head_ref }}
         run: python scripts/enforce_main_only.py
+      - name: Lint Python
+        run: |
+          python -m pip install flake8==7.5.0
+          python -m flake8 src tests scripts benchmarks
       - name: Python tests (three isolated runs)
         env:
           PYTHONPATH: src:.

@@ -30,4 +30,3 @@ class JonaSandbox:
         if decision is PolicyDecision.REJECT:
             raise PermissionError("JONA rejected datum")
         return datum
-

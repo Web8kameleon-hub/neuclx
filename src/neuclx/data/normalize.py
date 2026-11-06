@@ -17,9 +17,7 @@ class DataNormalizer:
         content = record.get("content", record.get("text"))
         if not isinstance(content, str):
             raise ValueError("record content or text must be a string")
-        normalized["content"] = " ".join(
-            unicodedata.normalize("NFKC", content).split()
-        )
+        normalized["content"] = " ".join(unicodedata.normalize("NFKC", content).split())
 
         source_id = record.get("source_id", record.get("source"))
         if source_id is not None:

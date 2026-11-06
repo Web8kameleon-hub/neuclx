@@ -3,26 +3,27 @@ import unittest
 from pathlib import Path
 from neuclx.web import NeuCLXApplication
 
+
 class JourneyTests(unittest.TestCase):
     def test_success_stone_preserves_epistemic_truth(self):
         with tempfile.TemporaryDirectory() as directory:
-            app = NeuCLXApplication(Path(directory)/"journey.sqlite3")
+            app = NeuCLXApplication(Path(directory) / "journey.sqlite3")
             try:
-                first=app.respond("unknown")
-                second=app.respond("sovereign",["NeuCLX is sovereign"])
-                self.assertEqual(first["achievement"],"recorded")
-                self.assertEqual(first["response"]["state"],"unavailable")
-                self.assertEqual(second["achievement"],"recorded")
-                self.assertEqual(second["response"]["state"],"declared")
-                self.assertLessEqual(first["stigma_frame"]["compressed_bytes"],first["stigma_frame"]["original_bytes"])
-                self.assertEqual(len(app.ledger.recent()),2)
+                first = app.respond("unknown")
+                second = app.respond("sovereign", ["NeuCLX is sovereign"])
+                self.assertEqual(first["achievement"], "recorded")
+                self.assertEqual(first["response"]["state"], "unavailable")
+                self.assertEqual(second["achievement"], "recorded")
+                self.assertEqual(second["response"]["state"], "declared")
+                self.assertLessEqual(first["stigma_frame"]["compressed_bytes"], first["stigma_frame"]["original_bytes"])
+                self.assertEqual(len(app.ledger.recent()), 2)
             finally:
                 app.close()
                 del app
 
     def test_fact_ingestion_persists_declared_memory(self):
         with tempfile.TemporaryDirectory() as directory:
-            app = NeuCLXApplication(Path(directory)/"journey.sqlite3")
+            app = NeuCLXApplication(Path(directory) / "journey.sqlite3")
             try:
                 app.respond("what is neuclx", ["NeuCLX is sovereign and evidence-bound"])
                 stored = app.learning.answer("sovereign")
@@ -35,7 +36,7 @@ class JourneyTests(unittest.TestCase):
 
     def test_web_app_exposes_real_memory_and_adapter(self):
         with tempfile.TemporaryDirectory() as directory:
-            app = NeuCLXApplication(Path(directory)/"journey.sqlite3")
+            app = NeuCLXApplication(Path(directory) / "journey.sqlite3")
             try:
                 self.assertTrue(hasattr(app, "memory"))
                 self.assertTrue(hasattr(app, "model_adapter"))
@@ -46,4 +47,6 @@ class JourneyTests(unittest.TestCase):
                 app.close()
                 del app
 
-if __name__=="__main__": unittest.main()
+
+if __name__ == "__main__":
+    unittest.main()

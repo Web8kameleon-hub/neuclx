@@ -17,7 +17,6 @@ from .evidence import Datum, EvidenceState
 from .jona import JonaSandbox
 from .learning import terms
 
-
 MAX_URLS = 10
 MAX_URL_LENGTH = 2048
 MAX_RESPONSE_BYTES = 1_000_000
@@ -155,14 +154,20 @@ class PublicWebReader:
             or parsed.fragment
         ):
             raise PublicWebReadError("only absolute HTTPS URLs without credentials or fragments are allowed")
-        query_keys = {
-            key.casefold()
-            for key, _ in parse_qsl(parsed.query, keep_blank_values=True)
-        }
-        if query_keys.intersection({
-            "key", "api_key", "token", "access_token", "password", "secret",
-            "signature", "authorization", "auth",
-        }):
+        query_keys = {key.casefold() for key, _ in parse_qsl(parsed.query, keep_blank_values=True)}
+        if query_keys.intersection(
+            {
+                "key",
+                "api_key",
+                "token",
+                "access_token",
+                "password",
+                "secret",
+                "signature",
+                "authorization",
+                "auth",
+            }
+        ):
             raise PublicWebReadError("URLs containing credential-like query parameters are not allowed")
         host = parsed.hostname
         try:
@@ -171,14 +176,20 @@ class PublicWebReader:
         except ValueError:
             host = host.encode("idna").decode("ascii")
         port = f":{parsed.port}" if parsed.port else ""
-        normalized = urlsplit(urlunsplit((
-            parsed.scheme,
-            host + port,
-            parsed.path,
-            parsed.query,
-            "",
-        )))
-        resolver_host = parsed.hostname.encode("idna").decode("ascii") if ":" not in parsed.hostname else parsed.hostname
+        normalized = urlsplit(
+            urlunsplit(
+                (
+                    parsed.scheme,
+                    host + port,
+                    parsed.path,
+                    parsed.query,
+                    "",
+                )
+            )
+        )
+        resolver_host = (
+            parsed.hostname.encode("idna").decode("ascii") if ":" not in parsed.hostname else parsed.hostname
+        )
         return normalized, resolver_host
 
     def _resolve_public_address(self, resolver_host, port):

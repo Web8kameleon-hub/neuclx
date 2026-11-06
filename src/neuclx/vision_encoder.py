@@ -20,7 +20,9 @@ class VisionEncoder:
             raise FileNotFoundError(f"image not found: {path}")
         return self.inspect_bytes(path.read_bytes(), source=str(path), author=author, task=task)
 
-    def inspect_bytes(self, image_bytes: bytes, *, source: str, author: str | None = None, task: str | None = None) -> Datum:
+    def inspect_bytes(
+        self, image_bytes: bytes, *, source: str, author: str | None = None, task: str | None = None
+    ) -> Datum:
         if not isinstance(image_bytes, (bytes, bytearray)):
             raise TypeError("image_bytes must be bytes")
 
@@ -59,7 +61,9 @@ class VisionEncoder:
             },
         )
 
-    def inspect_base64(self, image_b64: str, *, source: str, author: str | None = None, task: str | None = None) -> Datum:
+    def inspect_base64(
+        self, image_b64: str, *, source: str, author: str | None = None, task: str | None = None
+    ) -> Datum:
         return self.inspect_bytes(base64.b64decode(image_b64), source=source, author=author, task=task)
 
     @staticmethod
@@ -107,13 +111,13 @@ class VisionEncoder:
                 continue
             if index + 2 > size:
                 break
-            segment_length = int.from_bytes(data[index:index + 2], "big")
+            segment_length = int.from_bytes(data[index : index + 2], "big")
             if segment_length < 2:
                 break
             segment_start = index + 2
             if marker in sof_markers and segment_start + 5 <= size:
-                height = int.from_bytes(data[segment_start + 1:segment_start + 3], "big")
-                width = int.from_bytes(data[segment_start + 3:segment_start + 5], "big")
+                height = int.from_bytes(data[segment_start + 1 : segment_start + 3], "big")
+                width = int.from_bytes(data[segment_start + 3 : segment_start + 5], "big")
                 return "jpeg", width, height
             index = segment_start + segment_length - 2
         return "jpeg", None, None

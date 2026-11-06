@@ -17,7 +17,9 @@ class CADGenerator:
         self.output_dir_path = Path(self.output_dir)
         self.output_dir_path.mkdir(parents=True, exist_ok=True)
 
-    def generate(self, prompt: str, *, seed: int = 42, style: str = "clean", author: str | None = None, **kwargs: Any) -> tuple[str, str, dict[str, Any]]:
+    def generate(
+        self, prompt: str, *, seed: int = 42, style: str = "clean", author: str | None = None, **kwargs: Any
+    ) -> tuple[str, str, dict[str, Any]]:
         key = sha256(f"{prompt}|{seed}|{style}|{author or ''}|cad".encode()).hexdigest()[:12]
         output_path = self.output_dir_path / f"creative_{key}.obj"
         obj_text = self._build_obj(prompt, seed, style, author)

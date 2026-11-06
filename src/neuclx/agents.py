@@ -47,10 +47,7 @@ def normalize_agent_identifier(value: str) -> str:
     normalized = unicodedata.normalize("NFKC", value or "").strip()
     if not normalized:
         return ""
-    collapsed = "".join(
-        ch for ch in unicodedata.normalize("NFKD", normalized)
-        if not unicodedata.combining(ch)
-    )
+    collapsed = "".join(ch for ch in unicodedata.normalize("NFKD", normalized) if not unicodedata.combining(ch))
     key = "".join(ch for ch in collapsed.casefold() if ch.isalnum())
     return _AGENT_NAME_ALIASES.get(key, key)
 
@@ -244,14 +241,28 @@ class BaseAgent(ABC):
             duration_ms = (time.time() - start_time) * 1000
             self._metrics.completed_tasks += 1
             self._metrics.update_response_time(duration_ms)
-            return TaskResult(task_id=task.task_id, agent_id=self._id, success=True, result=result, duration_ms=duration_ms)
+            return TaskResult(
+                task_id=task.task_id, agent_id=self._id, success=True, result=result, duration_ms=duration_ms
+            )
         except asyncio.TimeoutError:
             self._metrics.failed_tasks += 1
-            return TaskResult(task_id=task.task_id, agent_id=self._id, success=False, error=f"Task timed out after {task.timeout}s", duration_ms=(time.time() - start_time) * 1000)
+            return TaskResult(
+                task_id=task.task_id,
+                agent_id=self._id,
+                success=False,
+                error=f"Task timed out after {task.timeout}s",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
         except Exception as e:
             self._metrics.failed_tasks += 1
             logger.error(f"Task {task.task_id} failed: {e}")
-            return TaskResult(task_id=task.task_id, agent_id=self._id, success=False, error=str(e), duration_ms=(time.time() - start_time) * 1000)
+            return TaskResult(
+                task_id=task.task_id,
+                agent_id=self._id,
+                success=False,
+                error=str(e),
+                duration_ms=(time.time() - start_time) * 1000,
+            )
         finally:
             with self._lock:
                 self._current_tasks.pop(task.task_id, None)
@@ -326,7 +337,11 @@ class AlbiAgent(BaseAgent):
     def answer(self, question: str) -> str:
         q = (question or "").lower()
         if "ui" in q or "frontend" in q:
-            return "Po, ekziston UI në src/neuclx/static me index.html, app.js dhe app.css, dhe aplikacioni ka endpoint /api/respond. Memory është reale dhe përdor SQLite me shënime të verifikuara."
+            return (
+                "Po, ekziston UI në src/neuclx/static me index.html, app.js dhe app.css, "
+                "dhe aplikacioni ka endpoint /api/respond. Memory është reale dhe përdor SQLite "
+                "me shënime të verifikuara."
+            )
         if "memory" in q:
             return "Memory është reale dhe përdor SQLite me vetëm shënime të verifikuara me state measured/computed."
         if "bridge" in q:
@@ -342,11 +357,16 @@ class AlbiAgent(BaseAgent):
                     "correlations": [{"field_a": "cpu", "field_b": "memory", "correlation": 0.85}],
                     "insights": ["High correlation between CPU and memory usage"],
                 },
-                "data_points_analyzed": len(task.payload.get("data", [])) if isinstance(task.payload.get("data", []), list) else 1,
+                "data_points_analyzed": (
+                    len(task.payload.get("data", [])) if isinstance(task.payload.get("data", []), list) else 1
+                ),
                 "analyzed_by": self._id,
             }
         if action == "detect_anomaly":
-            return {"anomalies": [{"timestamp": "2026-01-29T10:30:00Z", "severity": "warning", "type": "spike"}], "anomaly_count": 1}
+            return {
+                "anomalies": [{"timestamp": "2026-01-29T10:30:00Z", "severity": "warning", "type": "spike"}],
+                "anomaly_count": 1,
+            }
         return {"status": "unknown_action", "action": action}
 
 
@@ -368,8 +388,13 @@ class JonaAgent(BaseAgent):
     def answer(self, question: str) -> str:
         q = (question or "").lower()
         if "sandbox" in q or "policy" in q or "jona" in q:
-            return "JONA është sandbox-i obligues i sigurisë dhe policy-ja e kufirit: ai e vlerëson çdo datum para lëshimit dhe ndalon të dhëna të padëshiruara ose jo të verifikuara."
-        return "JONA është sandbox-i dhe policy-ja e kufirit të NeuCLX: çdo dalje duhet të kalojë kontrollin e evidencës."
+            return (
+                "JONA është sandbox-i obligues i sigurisë dhe policy-ja e kufirit: "
+                "ai e vlerëson çdo datum para lëshimit dhe ndalon të dhëna të padëshiruara ose jo të verifikuara."
+            )
+        return (
+            "JONA është sandbox-i dhe policy-ja e kufirit të NeuCLX: çdo dalje duhet të kalojë kontrollin e evidencës."
+        )
 
     async def execute(self, task: Task) -> Any:
         action = task.payload.get("action", "synthesize")
@@ -380,7 +405,14 @@ class JonaAgent(BaseAgent):
                 "based_on": list(context.keys()) if context else ["general_analysis"],
             }
         if action == "synthesize":
-            return {"synthesis": {"key_findings": ["System performance is optimal"], "summary": "Overall system health is good", "confidence": 0.92}, "sources_processed": 1}
+            return {
+                "synthesis": {
+                    "key_findings": ["System performance is optimal"],
+                    "summary": "Overall system health is good",
+                    "confidence": 0.92,
+                },
+                "sources_processed": 1,
+            }
         return {"status": "unknown_action", "action": action}
 
 
@@ -399,12 +431,23 @@ class JONAAgent(JonaAgent):
 class ASIAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="asi", agent_type=AgentType.CORE, version="1.0.0", capabilities=["decision-routing", "escalation", "multi-agent-coordination"], max_concurrent_tasks=20, min_instances=1, max_instances=3)
+        return AgentConfig(
+            name="asi",
+            agent_type=AgentType.CORE,
+            version="1.0.0",
+            capabilities=["decision-routing", "escalation", "multi-agent-coordination"],
+            max_concurrent_tasks=20,
+            min_instances=1,
+            max_instances=3,
+        )
 
     def answer(self, question: str) -> str:
         q = (question or "").lower()
         if "route" in q or "agent" in q or "esi" in q:
-            return "ASI është shtresa e vendimmarrjes dhe routing-ut: ajo zgjedh agjentin ose rrugën më të përshtatshme për detyrën dhe mund të eskalojë kur duhet."
+            return (
+                "ASI është shtresa e vendimmarrjes dhe routing-ut: ajo zgjedh agjentin ose rrugën më të përshtatshme "
+                "për detyrën dhe mund të eskalojë kur duhet."
+            )
         return "ASI është shtresa e vendimmarrjes, routing-ut dhe koordinimit multi-agent në NeuCLX."
 
     async def execute(self, task: Task) -> Any:
@@ -417,21 +460,45 @@ class ASIAgent(BaseAgent):
 class ASITrinityAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="asi-trinity", agent_type=AgentType.CORE, version="1.0.0", capabilities=["fusion-reasoning", "cross-modal-synthesis", "super-decision"], max_concurrent_tasks=10, min_instances=1, max_instances=2)
+        return AgentConfig(
+            name="asi-trinity",
+            agent_type=AgentType.CORE,
+            version="1.0.0",
+            capabilities=["fusion-reasoning", "cross-modal-synthesis", "super-decision"],
+            max_concurrent_tasks=10,
+            min_instances=1,
+            max_instances=2,
+        )
 
     async def execute(self, task: Task) -> Any:
-        return {"trinity_verdict": "consensus", "components": ["blerina", "alba", "albi"], "confidence": 0.97, "recommendation": task.payload.get("query", "no-query")}
+        return {
+            "trinity_verdict": "consensus",
+            "components": ["blerina", "alba", "albi"],
+            "confidence": 0.97,
+            "recommendation": task.payload.get("query", "no-query"),
+        }
 
 
 class BlerinaAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="blerina", agent_type=AgentType.PROCESSING, version="1.0.0", capabilities=["nlp", "language-reformatting", "translation-assist", "sentiment"], max_concurrent_tasks=15, min_instances=1, max_instances=5)
+        return AgentConfig(
+            name="blerina",
+            agent_type=AgentType.PROCESSING,
+            version="1.0.0",
+            capabilities=["nlp", "language-reformatting", "translation-assist", "sentiment"],
+            max_concurrent_tasks=15,
+            min_instances=1,
+            max_instances=5,
+        )
 
     def answer(self, question: str) -> str:
         q = (question or "").lower()
         if "translate" in q or "translation" in q or "language" in q or "multilingual" in q:
-            return "Blerina është shtresa multilingual e NeuCLX: ndihmon me reformulim, përkthim dhe përpunim gjuhësor në mënyrë të kontrolluar."
+            return (
+                "Blerina është shtresa multilingual e NeuCLX: ndihmon me reformulim, përkthim dhe përpunim gjuhësor "
+                "në mënyrë të kontrolluar."
+            )
         return "Blerina është shtresa multilingual dhe e reformulimit gjuhësor në NeuCLX."
 
     async def execute(self, task: Task) -> Any:
@@ -442,7 +509,15 @@ class BlerinaAgent(BaseAgent):
 class AldaAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="alda", agent_type=AgentType.PROCESSING, version="1.0.0", capabilities=["audio-analysis", "acoustic-profiling", "waveform-processing"], max_concurrent_tasks=10, min_instances=1, max_instances=4)
+        return AgentConfig(
+            name="alda",
+            agent_type=AgentType.PROCESSING,
+            version="1.0.0",
+            capabilities=["audio-analysis", "acoustic-profiling", "waveform-processing"],
+            max_concurrent_tasks=10,
+            min_instances=1,
+            max_instances=4,
+        )
 
     async def execute(self, task: Task) -> Any:
         return {"rms_db": -18.5, "peak_db": -6.2, "duration_sec": task.payload.get("duration", 0), "source": self._id}
@@ -451,7 +526,15 @@ class AldaAgent(BaseAgent):
 class AlbanaAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="albana", agent_type=AgentType.ML, version="1.0.0", capabilities=["biometric-reasoning", "eeg-analysis", "medical-insight"], max_concurrent_tasks=8, min_instances=1, max_instances=3)
+        return AgentConfig(
+            name="albana",
+            agent_type=AgentType.ML,
+            version="1.0.0",
+            capabilities=["biometric-reasoning", "eeg-analysis", "medical-insight"],
+            max_concurrent_tasks=8,
+            min_instances=1,
+            max_instances=3,
+        )
 
     async def execute(self, task: Task) -> Any:
         return {"biometric_score": 0.88, "eeg_band": "alpha", "clinical_flag": False, "source": self._id}
@@ -460,25 +543,59 @@ class AlbanaAgent(BaseAgent):
 class MaliAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="mali", agent_type=AgentType.INTEGRATION, version="1.0.0", capabilities=["geo-routing", "edge-compute", "latency-optimization"], max_concurrent_tasks=12, min_instances=1, max_instances=4)
+        return AgentConfig(
+            name="mali",
+            agent_type=AgentType.INTEGRATION,
+            version="1.0.0",
+            capabilities=["geo-routing", "edge-compute", "latency-optimization"],
+            max_concurrent_tasks=12,
+            min_instances=1,
+            max_instances=4,
+        )
 
     async def execute(self, task: Task) -> Any:
-        return {"routed_region": task.payload.get("region", "balkans"), "edge_node": "mali-01", "latency_ms": 12, "source": self._id}
+        return {
+            "routed_region": task.payload.get("region", "balkans"),
+            "edge_node": "mali-01",
+            "latency_ms": 12,
+            "source": self._id,
+        }
 
 
 class SofiaAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="sofia", agent_type=AgentType.ANALYTICS, version="1.0.0", capabilities=["chemistry-analysis", "lab-automation", "research-synthesis"], max_concurrent_tasks=8, min_instances=1, max_instances=3)
+        return AgentConfig(
+            name="sofia",
+            agent_type=AgentType.ANALYTICS,
+            version="1.0.0",
+            capabilities=["chemistry-analysis", "lab-automation", "research-synthesis"],
+            max_concurrent_tasks=8,
+            min_instances=1,
+            max_instances=3,
+        )
 
     async def execute(self, task: Task) -> Any:
-        return {"compound": task.payload.get("compound", "unknown"), "purity": 0.999, "lab": "sofia-chemistry", "source": self._id}
+        return {
+            "compound": task.payload.get("compound", "unknown"),
+            "purity": 0.999,
+            "lab": "sofia-chemistry",
+            "source": self._id,
+        }
 
 
 class LiamAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="liam", agent_type=AgentType.INTEGRATION, version="1.0.0", capabilities=["sdk-bridge", "developer-tools", "code-gen"], max_concurrent_tasks=15, min_instances=1, max_instances=5)
+        return AgentConfig(
+            name="liam",
+            agent_type=AgentType.INTEGRATION,
+            version="1.0.0",
+            capabilities=["sdk-bridge", "developer-tools", "code-gen"],
+            max_concurrent_tasks=15,
+            min_instances=1,
+            max_instances=5,
+        )
 
     async def execute(self, task: Task) -> Any:
         return {"bridged": True, "sdk": task.payload.get("sdk", "python"), "version": "latest", "source": self._id}
@@ -487,7 +604,15 @@ class LiamAgent(BaseAgent):
 class KlajdiAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="klajdi", agent_type=AgentType.INTEGRATION, version="1.0.0", capabilities=["security-audit", "access-control", "compliance-check"], max_concurrent_tasks=10, min_instances=1, max_instances=3)
+        return AgentConfig(
+            name="klajdi",
+            agent_type=AgentType.INTEGRATION,
+            version="1.0.0",
+            capabilities=["security-audit", "access-control", "compliance-check"],
+            max_concurrent_tasks=10,
+            min_instances=1,
+            max_instances=3,
+        )
 
     async def execute(self, task: Task) -> Any:
         return {"passed": True, "findings": [], "severity": "none", "source": self._id}
@@ -496,16 +621,37 @@ class KlajdiAgent(BaseAgent):
 class EAPAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="eap", agent_type=AgentType.PROCESSING, version="1.0.0", capabilities=["workflow-automation", "process-orchestration", "enterprise-integration"], max_concurrent_tasks=20, min_instances=1, max_instances=6)
+        return AgentConfig(
+            name="eap",
+            agent_type=AgentType.PROCESSING,
+            version="1.0.0",
+            capabilities=["workflow-automation", "process-orchestration", "enterprise-integration"],
+            max_concurrent_tasks=20,
+            min_instances=1,
+            max_instances=6,
+        )
 
     async def execute(self, task: Task) -> Any:
-        return {"workflow": task.payload.get("workflow", "default"), "triggered": True, "steps_queued": 3, "source": self._id}
+        return {
+            "workflow": task.payload.get("workflow", "default"),
+            "triggered": True,
+            "steps_queued": 3,
+            "source": self._id,
+        }
 
 
 class MatiaAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="matia", agent_type=AgentType.ANALYTICS, version="1.0.0", capabilities=["marketplace-analysis", "product-matching", "pricing-intelligence"], max_concurrent_tasks=15, min_instances=1, max_instances=5)
+        return AgentConfig(
+            name="matia",
+            agent_type=AgentType.ANALYTICS,
+            version="1.0.0",
+            capabilities=["marketplace-analysis", "product-matching", "pricing-intelligence"],
+            max_concurrent_tasks=15,
+            min_instances=1,
+            max_instances=5,
+        )
 
     async def execute(self, task: Task) -> Any:
         return {"matches": [], "query": task.payload.get("query", ""), "marketplace": "clisonix", "source": self._id}
@@ -514,34 +660,82 @@ class MatiaAgent(BaseAgent):
 class VideoCreatorAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="video-creator", agent_type=AgentType.ML, version="1.0.0", capabilities=["video-generation", "scene-rendering", "subtitle-generation"], max_concurrent_tasks=4, min_instances=1, max_instances=3)
+        return AgentConfig(
+            name="video-creator",
+            agent_type=AgentType.ML,
+            version="1.0.0",
+            capabilities=["video-generation", "scene-rendering", "subtitle-generation"],
+            max_concurrent_tasks=4,
+            min_instances=1,
+            max_instances=3,
+        )
 
     async def execute(self, task: Task) -> Any:
-        return {"job_id": f"vid_{uuid.uuid4().hex[:8]}", "prompt": task.payload.get("prompt", ""), "status": "queued", "source": self._id}
+        return {
+            "job_id": f"vid_{uuid.uuid4().hex[:8]}",
+            "prompt": task.payload.get("prompt", ""),
+            "status": "queued",
+            "source": self._id,
+        }
 
 
 class NewsPublisherAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="news-publisher", agent_type=AgentType.PROCESSING, version="1.0.0", capabilities=["news-generation", "content-publishing", "rss-feed"], max_concurrent_tasks=10, min_instances=1, max_instances=4)
+        return AgentConfig(
+            name="news-publisher",
+            agent_type=AgentType.PROCESSING,
+            version="1.0.0",
+            capabilities=["news-generation", "content-publishing", "rss-feed"],
+            max_concurrent_tasks=10,
+            min_instances=1,
+            max_instances=4,
+        )
 
     async def execute(self, task: Task) -> Any:
-        return {"article_id": f"news_{uuid.uuid4().hex[:8]}", "topic": task.payload.get("topic", ""), "published": False, "status": "draft", "source": self._id}
+        return {
+            "article_id": f"news_{uuid.uuid4().hex[:8]}",
+            "topic": task.payload.get("topic", ""),
+            "published": False,
+            "status": "draft",
+            "source": self._id,
+        }
 
 
 class SelflearningAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="selflearning", agent_type=AgentType.ML, version="1.0.0", capabilities=["reinforcement-learning", "feedback-processing", "memory-consolidation"], max_concurrent_tasks=5, min_instances=1, max_instances=2)
+        return AgentConfig(
+            name="selflearning",
+            agent_type=AgentType.ML,
+            version="1.0.0",
+            capabilities=["reinforcement-learning", "feedback-processing", "memory-consolidation"],
+            max_concurrent_tasks=5,
+            min_instances=1,
+            max_instances=2,
+        )
 
     async def execute(self, task: Task) -> Any:
-        return {"signal_absorbed": True, "signal": task.payload.get("signal", "success"), "memory_updated": True, "source": self._id}
+        return {
+            "signal_absorbed": True,
+            "signal": task.payload.get("signal", "success"),
+            "memory_updated": True,
+            "source": self._id,
+        }
 
 
 class NanogridAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="nanogrid", agent_type=AgentType.ANALYTICS, version="1.0.0", capabilities=["energy-monitoring", "nanodecibel-metrics", "compute-grid"], max_concurrent_tasks=12, min_instances=1, max_instances=4)
+        return AgentConfig(
+            name="nanogrid",
+            agent_type=AgentType.ANALYTICS,
+            version="1.0.0",
+            capabilities=["energy-monitoring", "nanodecibel-metrics", "compute-grid"],
+            max_concurrent_tasks=12,
+            min_instances=1,
+            max_instances=4,
+        )
 
     async def execute(self, task: Task) -> Any:
         return {"power_w": 0.0, "nanodecibel_ndb": 0.0, "grid_nodes": 0, "status": "nominal", "source": self._id}
@@ -550,10 +744,23 @@ class NanogridAgent(BaseAgent):
 class ZeissAgent(BaseAgent):
     @property
     def config(self) -> AgentConfig:
-        return AgentConfig(name="zeiss", agent_type=AgentType.ML, version="1.0.0", capabilities=["optical-analysis", "image-calibration", "microscopy"], max_concurrent_tasks=8, min_instances=1, max_instances=3)
+        return AgentConfig(
+            name="zeiss",
+            agent_type=AgentType.ML,
+            version="1.0.0",
+            capabilities=["optical-analysis", "image-calibration", "microscopy"],
+            max_concurrent_tasks=8,
+            min_instances=1,
+            max_instances=3,
+        )
 
     async def execute(self, task: Task) -> Any:
-        return {"sharpness_score": 0.0, "aberration": "none", "magnification": task.payload.get("magnification", 1), "source": self._id}
+        return {
+            "sharpness_score": 0.0,
+            "aberration": "none",
+            "magnification": task.payload.get("magnification", 1),
+            "source": self._id,
+        }
 
 
 class AgentPool:
@@ -635,7 +842,12 @@ class AgentPool:
         if not agent:
             agent = await self._add_instance()
             if not agent:
-                return TaskResult(task_id=task.task_id, agent_id="pool", success=False, error="No available agents, pool at maximum capacity")
+                return TaskResult(
+                    task_id=task.task_id,
+                    agent_id="pool",
+                    success=False,
+                    error="No available agents, pool at maximum capacity",
+                )
         return await agent._run_task(task)
 
     async def scale(self, target: int) -> Dict[str, Any]:
@@ -752,24 +964,41 @@ class AgentOrchestrator:
     def register(self, agent_class: type, min_instances: int = 1, max_instances: int = 5) -> str:
         return self._registry.register(agent_class, min_instances, max_instances)
 
-    async def submit(self, agent_name: str, payload: Dict[str, Any], priority: TaskPriority = TaskPriority.NORMAL, timeout: float = 30.0) -> TaskResult:
+    async def submit(
+        self,
+        agent_name: str,
+        payload: Dict[str, Any],
+        priority: TaskPriority = TaskPriority.NORMAL,
+        timeout: float = 30.0,
+    ) -> TaskResult:
         normalized_name = normalize_agent_identifier(agent_name)
         pool = self._registry.get_pool(normalized_name)
         if not pool:
-            return TaskResult(task_id="unknown", agent_id="orchestrator", success=False, error=f"Agent '{agent_name}' not found")
+            return TaskResult(
+                task_id="unknown", agent_id="orchestrator", success=False, error=f"Agent '{agent_name}' not found"
+            )
         with self._lock:
             self._task_counter += 1
             task_id = f"task_{self._task_counter}_{uuid.uuid4().hex[:6]}"
         task = Task(task_id=task_id, agent_name=normalized_name, payload=payload, priority=priority, timeout=timeout)
         return await pool.submit(task)
 
-    async def submit_by_capability(self, capability: str, payload: Dict[str, Any], priority: TaskPriority = TaskPriority.NORMAL) -> TaskResult:
+    async def submit_by_capability(
+        self, capability: str, payload: Dict[str, Any], priority: TaskPriority = TaskPriority.NORMAL
+    ) -> TaskResult:
         agents = self._registry.find_by_capability(capability)
         if not agents:
-            return TaskResult(task_id="unknown", agent_id="orchestrator", success=False, error=f"No agent found with capability '{capability}'")
+            return TaskResult(
+                task_id="unknown",
+                agent_id="orchestrator",
+                success=False,
+                error=f"No agent found with capability '{capability}'",
+            )
         return await self.submit(agents[0], payload, priority)
 
-    async def broadcast(self, payload: Dict[str, Any], agent_names: Optional[List[str]] = None) -> Dict[str, TaskResult]:
+    async def broadcast(
+        self, payload: Dict[str, Any], agent_names: Optional[List[str]] = None
+    ) -> Dict[str, TaskResult]:
         if agent_names is None:
             agent_names = ["alba", "albi", "jona"]
         results: Dict[str, TaskResult] = {}
@@ -781,7 +1010,9 @@ class AgentOrchestrator:
             elif isinstance(result, TaskResult):
                 results[name] = result
             else:
-                results[name] = TaskResult(task_id="unknown", agent_id=name, success=False, error="unexpected_broadcast_result_type")
+                results[name] = TaskResult(
+                    task_id="unknown", agent_id=name, success=False, error="unexpected_broadcast_result_type"
+                )
         return results
 
     async def scale(self, agent_name: str, target: int) -> Dict[str, Any]:
@@ -802,7 +1033,17 @@ class AgentOrchestrator:
         agents = self._registry.list_agents()
         total_instances = sum(a["pool"]["total_instances"] for a in agents if a["pool"])
         available = sum(a["pool"]["available"] for a in agents if a["pool"])
-        return {"status": "operational", "uptime_seconds": time.time() - self._start_time, "total_tasks_processed": self._task_counter, "agents": {"registered": len(agents), "total_instances": total_instances, "available_instances": available}, "timestamp": datetime.now(timezone.utc).isoformat()}
+        return {
+            "status": "operational",
+            "uptime_seconds": time.time() - self._start_time,
+            "total_tasks_processed": self._task_counter,
+            "agents": {
+                "registered": len(agents),
+                "total_instances": total_instances,
+                "available_instances": available,
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
 
 _orchestrator: Optional[AgentOrchestrator] = None

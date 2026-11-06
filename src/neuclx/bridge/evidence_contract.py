@@ -14,19 +14,23 @@ class ContractViolation(ValueError):
 
 @dataclass
 class EvidenceContract:
-    required_fields: List[str] = field(default_factory=lambda: [
-        "id",
-        "name",
-        "source_type",
-        "location",
-        "hash",
-        "timestamp",
-        "license",
-    ])
-    allowed_states: List[EvidenceState] = field(default_factory=lambda: [
-        EvidenceState.MEASURED,
-        EvidenceState.COMPUTED,
-    ])
+    required_fields: List[str] = field(
+        default_factory=lambda: [
+            "id",
+            "name",
+            "source_type",
+            "location",
+            "hash",
+            "timestamp",
+            "license",
+        ]
+    )
+    allowed_states: List[EvidenceState] = field(
+        default_factory=lambda: [
+            EvidenceState.MEASURED,
+            EvidenceState.COMPUTED,
+        ]
+    )
     require_hash: bool = True
     require_license: bool = True
     require_timestamp: bool = True
@@ -38,9 +42,7 @@ class EvidenceContract:
                 raise ContractViolation(f"Field '{field_name}' is required.")
 
         if manifest.evidence_state not in self.allowed_states:
-            raise ContractViolation(
-                f"Evidence state '{manifest.evidence_state.value}' is not allowed."
-            )
+            raise ContractViolation(f"Evidence state '{manifest.evidence_state.value}' is not allowed.")
 
         if self.require_hash and manifest.hash is None:
             raise ContractViolation("Manifest hash is required.")

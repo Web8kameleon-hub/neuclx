@@ -15,7 +15,6 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from .evidence import Datum, EvidenceState
 from .jona import JonaSandbox, PolicyDecision
 
-
 MAX_PROMPT_BYTES = 1_048_576
 MAX_RESPONSE_BYTES = 1_048_576
 
@@ -66,9 +65,7 @@ class ModelAdapter:
         model_name = os.environ.get("NEUCLX_MODEL_NAME", "").strip()
         endpoint = os.environ.get("NEUCLX_MODEL_ENDPOINT", "").strip()
         if not model_name or not endpoint:
-            raise ValueError(
-                "NEUCLX_MODEL_NAME and NEUCLX_MODEL_ENDPOINT are required when model inference is enabled"
-            )
+            raise ValueError("NEUCLX_MODEL_NAME and NEUCLX_MODEL_ENDPOINT are required when model inference is enabled")
         timeout_value = os.environ.get("NEUCLX_MODEL_TIMEOUT", "30")
         try:
             timeout = float(timeout_value)
@@ -83,13 +80,10 @@ class ModelAdapter:
             timeout=timeout,
         )
 
-    def generate(
-        self, prompt: str, *, temperature: float = 0.0, max_tokens: int = 256
-    ) -> Datum:
+    def generate(self, prompt: str, *, temperature: float = 0.0, max_tokens: int = 256) -> Datum:
         if not self.enabled:
             return self.sandbox.release(
-                Datum(None, EvidenceState.NOT_IMPLEMENTED,
-                      method="model-adapter-disabled-or-no-model")
+                Datum(None, EvidenceState.NOT_IMPLEMENTED, method="model-adapter-disabled-or-no-model")
             )
         if not isinstance(self.model_name, str) or not self.model_name.strip():
             raise ValueError("model_name is required when model inference is enabled")

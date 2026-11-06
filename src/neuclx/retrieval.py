@@ -29,7 +29,6 @@ def bm25_scores(query, documents):
         normalization = 1.5 * (0.25 + 0.75 * lengths[index] / average)
         for word in sorted(wanted.intersection(counts)):
             frequency = counts[word]
-            idf = log1p((total - document_counts[word] + 0.5) /
-                        (document_counts[word] + 0.5))
+            idf = log1p((total - document_counts[word] + 0.5) / (document_counts[word] + 0.5))
             scores[index] += idf * frequency * 2.5 / (frequency + normalization)
     return scores

@@ -22,7 +22,16 @@ class AudioGenerator:
         self.output_dir_path.mkdir(parents=True, exist_ok=True)
         self.sample_rate = 22050
 
-    def generate(self, prompt: str, *, seed: int = 42, style: str = "clean", author: str | None = None, duration: int = 4, **kwargs: Any) -> tuple[str, str, Dict[str, Any]]:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        seed: int = 42,
+        style: str = "clean",
+        author: str | None = None,
+        duration: int = 4,
+        **kwargs: Any,
+    ) -> tuple[str, str, Dict[str, Any]]:
         key = sha256(f"{prompt}|{seed}|{style}|{author or ''}|audio".encode("utf-8")).hexdigest()[:12]
         output_path = self.output_dir_path / f"creative_{key}.wav"
         frequencies = self._frequencies(prompt, seed)

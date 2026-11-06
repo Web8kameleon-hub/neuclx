@@ -183,9 +183,7 @@ class ModelAdapterTests(unittest.TestCase):
                 return super().evaluate(datum)
 
         rejected_adapter = enabled_local_adapter(RejectOutput())
-        rejected_adapter._opener = FakeOpener(
-            FakeResponse({"choices": [{"message": {"content": "unsafe"}}]})
-        )
+        rejected_adapter._opener = FakeOpener(FakeResponse({"choices": [{"message": {"content": "unsafe"}}]}))
         with self.assertRaises(PermissionError):
             rejected_adapter.generate("prompt")
 
@@ -205,9 +203,7 @@ class ModelAdapterTests(unittest.TestCase):
 
     def test_endpoint_errors_are_explicit_and_do_not_fall_back(self):
         adapter = enabled_local_adapter()
-        adapter._opener = FakeOpener(error=HTTPError(
-            adapter.endpoint, 429, "rate limited", hdrs=None, fp=None
-        ))
+        adapter._opener = FakeOpener(error=HTTPError(adapter.endpoint, 429, "rate limited", hdrs=None, fp=None))
 
         with self.assertRaisesRegex(RuntimeError, "HTTP 429"):
             adapter.generate("prompt")

@@ -18,7 +18,6 @@ from neuclx.stigma_chip import (
     CENTER_HZ_FX,
     MASK,
     MOMENTUM_BOOT,
-    ONE_Q32,
     VDPA_INIT,
     StigmaCore,
     memory_step,
@@ -28,7 +27,9 @@ from neuclx.stigma_chip import (
 
 TB = Path(__file__).parent / "rtl" / "stigma_core_tb.v"
 RTL = os.environ.get("NEUCLX_STIGMA_RTL", "")
-IVERILOG = shutil.which("iverilog") or str(Path(os.environ.get("ChocolateyInstall", r"C:\ProgramData\chocolatey")) / "bin" / "iverilog.exe")
+IVERILOG = shutil.which("iverilog") or str(
+    Path(os.environ.get("ChocolateyInstall", r"C:\ProgramData\chocolatey")) / "bin" / "iverilog.exe"
+)
 VVP = shutil.which("vvp") or str(Path(IVERILOG).with_name("vvp.exe"))
 
 
@@ -37,7 +38,11 @@ def stimulus(seed: int, cycles: int) -> list[tuple[int, int]]:
     rows = [(0xD9999999, 0xFFFF0000), (0xD9999999, 0xFFFF0000), (0, 0)]
     for _ in range(cycles - len(rows)):
         kind = rng.randrange(4)
-        ndb = rng.getrandbits(32) if kind == 0 else rng.getrandbits(64) if kind == 1 else rng.choice((0, 1, 0xD9999999, MASK))
+        ndb = (
+            rng.getrandbits(32)
+            if kind == 0
+            else rng.getrandbits(64) if kind == 1 else rng.choice((0, 1, 0xD9999999, MASK))
+        )
         rows.append((ndb, rng.getrandbits(64)))
     return rows
 
@@ -52,9 +57,17 @@ class StigmaRtlDifferentialTests(unittest.TestCase):
             stim = Path(tmp) / "stim.hex"
             stim.write_text("".join(f"{ndb:016x}{wave:016x}\n" for ndb, wave in rows))
             vvp = Path(tmp) / "tb.vvp"
-            subprocess.run([IVERILOG, "-g2012", "-o", str(vvp), str(TB), RTL], check=True, capture_output=True, text=True)
-            out = subprocess.run([VVP, str(vvp), f"+stim={stim}", f"+n={len(rows)}"], check=True, capture_output=True, text=True).stdout
-        return [line.split() for line in out.splitlines() if line.startswith("RESET") or len(line.split()) == 3 and not line.startswith("WARNING")]
+            subprocess.run(
+                [IVERILOG, "-g2012", "-o", str(vvp), str(TB), RTL], check=True, capture_output=True, text=True
+            )
+            out = subprocess.run(
+                [VVP, str(vvp), f"+stim={stim}", f"+n={len(rows)}"], check=True, capture_output=True, text=True
+            ).stdout
+        return [
+            line.split()
+            for line in out.splitlines()
+            if line.startswith("RESET") or len(line.split()) == 3 and not line.startswith("WARNING")
+        ]
 
     def test_reset_state_matches_model(self):
         lines = self.run_rtl(stimulus(1, 3))

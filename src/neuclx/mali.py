@@ -181,10 +181,18 @@ class SignalIntake:
                             break
                         payload = response.json()
                         safe_payload = self._sanitize_data(payload)
-                        self._sources[source] = safe_payload if isinstance(safe_payload, dict) else {"value": safe_payload}
+                        self._sources[source] = (
+                            safe_payload if isinstance(safe_payload, dict) else {"value": safe_payload}
+                        )
                         self._last_intake[source] = datetime.now(timezone.utc).isoformat()
                         self._last_errors.pop(source, None)
-                        return {"source": source, "status": "ok", "url": url, "attempt": attempt, "data": self._sources[source]}
+                        return {
+                            "source": source,
+                            "status": "ok",
+                            "url": url,
+                            "attempt": attempt,
+                            "data": self._sources[source],
+                        }
                     except Exception as error:
                         last_error = f"{type(error).__name__}: {error} @ {url}"
                         if attempt < self._retry_attempts:
@@ -203,15 +211,31 @@ class SignalIntake:
         return await self._fetch_json_with_failover("ocean_core", self._endpoint_catalog["ocean_core"])
 
     async def intake_from_excel_core(self) -> Dict[str, Any]:
-        metrics_result = await self._fetch_json_with_failover("excel_core_metrics", self._endpoint_catalog["excel_core"])
-        docker_result = await self._fetch_json_with_failover("excel_core_docker", self._endpoint_catalog["excel_core_docker"])
+        metrics_result = await self._fetch_json_with_failover(
+            "excel_core_metrics", self._endpoint_catalog["excel_core"]
+        )
+        docker_result = await self._fetch_json_with_failover(
+            "excel_core_docker", self._endpoint_catalog["excel_core_docker"]
+        )
         if metrics_result.get("status") != "ok" and docker_result.get("status") != "ok":
-            return {"source": "excel_core", "status": "error", "error": f"metrics={metrics_result.get('error', 'metrics_unavailable')}; docker={docker_result.get('error', 'docker_unavailable')}"}
+            return {
+                "source": "excel_core",
+                "status": "error",
+                "error": (
+                    f"metrics={metrics_result.get('error', 'metrics_unavailable')}; "
+                    f"docker={docker_result.get('error', 'docker_unavailable')}"
+                ),
+            }
         data = {"system_metrics": metrics_result.get("data", {}), "docker_stats": docker_result.get("data", {})}
         self._sources["excel_core"] = data
         self._last_intake["excel_core"] = datetime.now(timezone.utc).isoformat()
         self._last_errors.pop("excel_core", None)
-        return {"source": "excel_core", "status": "ok", "data": data, "meta": {"metrics_url": metrics_result.get("url"), "docker_url": docker_result.get("url")}}
+        return {
+            "source": "excel_core",
+            "status": "ok",
+            "data": data,
+            "meta": {"metrics_url": metrics_result.get("url"), "docker_url": docker_result.get("url")},
+        }
 
     async def intake_from_blerina(self) -> Dict[str, Any]:
         return await self._fetch_json_with_failover("blerina", self._endpoint_catalog["blerina"])
@@ -226,11 +250,31 @@ class SignalIntake:
             return_exceptions=True,
         )
         return {
-            "ocean_core": results[0] if not isinstance(results[0], Exception) else {"source": "ocean_core", "status": "error", "error": str(results[0])},
-            "liam": results[1] if not isinstance(results[1], Exception) else {"source": "liam", "status": "error", "error": str(results[1])},
-            "alda": results[2] if not isinstance(results[2], Exception) else {"source": "alda", "status": "error", "error": str(results[2])},
-            "excel_core": results[3] if not isinstance(results[3], Exception) else {"source": "excel_core", "status": "error", "error": str(results[3])},
-            "blerina": results[4] if not isinstance(results[4], Exception) else {"source": "blerina", "status": "error", "error": str(results[4])},
+            "ocean_core": (
+                results[0]
+                if not isinstance(results[0], Exception)
+                else {"source": "ocean_core", "status": "error", "error": str(results[0])}
+            ),
+            "liam": (
+                results[1]
+                if not isinstance(results[1], Exception)
+                else {"source": "liam", "status": "error", "error": str(results[1])}
+            ),
+            "alda": (
+                results[2]
+                if not isinstance(results[2], Exception)
+                else {"source": "alda", "status": "error", "error": str(results[2])}
+            ),
+            "excel_core": (
+                results[3]
+                if not isinstance(results[3], Exception)
+                else {"source": "excel_core", "status": "error", "error": str(results[3])}
+            ),
+            "blerina": (
+                results[4]
+                if not isinstance(results[4], Exception)
+                else {"source": "blerina", "status": "error", "error": str(results[4])}
+            ),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -265,10 +309,24 @@ class IntelligenceEngine:
             metrics = data["system_metrics"]
             cpu = metrics.get("cpu_percent", 0)
             if cpu > 80:
-                patterns.append({"type": "high_cpu", "value": cpu, "threshold": 80, "severity": "warning" if cpu < 95 else "critical"})
+                patterns.append(
+                    {
+                        "type": "high_cpu",
+                        "value": cpu,
+                        "threshold": 80,
+                        "severity": "warning" if cpu < 95 else "critical",
+                    }
+                )
             mem = metrics.get("memory_percent", 0)
             if mem > 85:
-                patterns.append({"type": "high_memory", "value": mem, "threshold": 85, "severity": "warning" if mem < 95 else "critical"})
+                patterns.append(
+                    {
+                        "type": "high_memory",
+                        "value": mem,
+                        "threshold": 85,
+                        "severity": "warning" if mem < 95 else "critical",
+                    }
+                )
         if "docker_stats" in data:
             stats = data.get("docker_stats", {}).get("stats", [])
             for container in stats:
@@ -276,7 +334,14 @@ class IntelligenceEngine:
                 try:
                     cpu = float(cpu_str)
                     if cpu > 50:
-                        patterns.append({"type": "container_high_cpu", "container": container.get("name"), "value": cpu, "severity": "info"})
+                        patterns.append(
+                            {
+                                "type": "container_high_cpu",
+                                "container": container.get("name"),
+                                "value": cpu,
+                                "severity": "info",
+                            }
+                        )
                 except ValueError:
                     pass
         self._patterns.extend(patterns)
@@ -295,7 +360,14 @@ class IntelligenceEngine:
             if alda_data.get("active_units", 0) > 50:
                 stress_sources.append("alda")
         if len(stress_sources) > 1:
-            correlations.append({"type": "multi_module_stress", "modules": stress_sources, "description": f"Multiple modules under stress: {', '.join(stress_sources)}", "recommendation": "Consider load balancing or scaling"})
+            correlations.append(
+                {
+                    "type": "multi_module_stress",
+                    "modules": stress_sources,
+                    "description": f"Multiple modules under stress: {', '.join(stress_sources)}",
+                    "recommendation": "Consider load balancing or scaling",
+                }
+            )
         self._correlations.extend(correlations)
         self._trim_history(self._correlations, self._max_correlations)
         return correlations
@@ -309,7 +381,14 @@ class IntelligenceEngine:
             if len(cpu_values) >= 3:
                 trend = np.polyfit(range(len(cpu_values)), cpu_values, 1)[0]
                 if trend > 2:
-                    predictions.append({"type": "cpu_rising_trend", "trend_slope": round(trend, 2), "prediction": "CPU usage increasing, may hit threshold in near future", "confidence": min(0.9, 0.5 + abs(trend) / 10)})
+                    predictions.append(
+                        {
+                            "type": "cpu_rising_trend",
+                            "trend_slope": round(trend, 2),
+                            "prediction": "CPU usage increasing, may hit threshold in near future",
+                            "confidence": min(0.9, 0.5 + abs(trend) / 10),
+                        }
+                    )
         except Exception:
             pass
         self._predictions.extend(predictions)
@@ -323,9 +402,27 @@ class AnnouncementLayer:
         self._subscribers: List[Callable[[Announcement], None]] = []
         self._max_announcements: int = 1000
 
-    def announce(self, type: AnnouncementType, priority: AnnouncementPriority, title: str, content: str, source_module: str, data: Optional[Dict[str, Any]] = None, actions: Optional[List[str]] = None) -> Announcement:
+    def announce(
+        self,
+        type: AnnouncementType,
+        priority: AnnouncementPriority,
+        title: str,
+        content: str,
+        source_module: str,
+        data: Optional[Dict[str, Any]] = None,
+        actions: Optional[List[str]] = None,
+    ) -> Announcement:
         ann_id = hashlib.md5(f"{title}{datetime.now().isoformat()}".encode()).hexdigest()[:10]
-        announcement = Announcement(id=ann_id, type=type, priority=priority, title=title, content=content, source_module=source_module, data=data or {}, actions=actions or [])
+        announcement = Announcement(
+            id=ann_id,
+            type=type,
+            priority=priority,
+            title=title,
+            content=content,
+            source_module=source_module,
+            data=data or {},
+            actions=actions or [],
+        )
         self._announcements.append(announcement)
         if len(self._announcements) > self._max_announcements:
             self._announcements = self._announcements[-self._max_announcements // 2 :]
@@ -384,7 +481,12 @@ class ExcelTabulator:
             mem_total=metrics.get("memory_total_gb", "N/A"),
             disk_total=metrics.get("disk_total_gb", "N/A"),
         )
-        return {"type": "system_metrics", "markdown": table_md.strip(), "raw_data": metrics, "generated_at": datetime.now(timezone.utc).isoformat()}
+        return {
+            "type": "system_metrics",
+            "markdown": table_md.strip(),
+            "raw_data": metrics,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
 
     async def generate_docker_stats_table(self) -> Dict[str, Any]:
         result = await self.intake.intake_from_excel_core()
@@ -395,13 +497,29 @@ class ExcelTabulator:
             return {"error": "No docker stats available", "table": None}
         rows = ["| Container | CPU | Memory | Usage |", "|-----------|-----|--------|-------|"]
         for container in stats[:10]:
-            rows.append(f"| {container.get('name', 'N/A')} | {container.get('cpu_percent', 'N/A')} | {container.get('memory_percent', 'N/A')} | {container.get('memory_usage', 'N/A')} |")
-        return {"type": "docker_stats", "markdown": "\n".join(rows), "raw_data": stats, "container_count": len(stats), "generated_at": datetime.now(timezone.utc).isoformat()}
+            name = container.get("name", "N/A")
+            cpu_percent = container.get("cpu_percent", "N/A")
+            memory_percent = container.get("memory_percent", "N/A")
+            memory_usage = container.get("memory_usage", "N/A")
+            rows.append(f"| {name} | {cpu_percent} | {memory_percent} | {memory_usage} |")
+        return {
+            "type": "docker_stats",
+            "markdown": "\n".join(rows),
+            "raw_data": stats,
+            "container_count": len(stats),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
 
     async def generate_liam_matrix_table(self) -> Dict[str, Any]:
         result = await self.intake.intake_from_liam()
         if result.get("status") != "ok":
-            data = {"matrix_operations": 1250, "tensor_transforms": 340, "binary_encodings": 890, "svd_compressions": 45, "avg_latency_ms": 12.5}
+            data = {
+                "matrix_operations": 1250,
+                "tensor_transforms": 340,
+                "binary_encodings": 890,
+                "svd_compressions": 45,
+                "avg_latency_ms": 12.5,
+            }
         else:
             data = result.get("data", {})
         table_md = """
@@ -420,16 +538,31 @@ class ExcelTabulator:
             latency=data.get("avg_latency_ms", "N/A"),
             latency_status="🟢 Fast" if data.get("avg_latency_ms", 100) < 50 else "🟡 Moderate",
         )
-        return {"type": "liam_matrix", "markdown": table_md.strip(), "raw_data": data, "generated_at": datetime.now(timezone.utc).isoformat()}
+        return {
+            "type": "liam_matrix",
+            "markdown": table_md.strip(),
+            "raw_data": data,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
 
     async def generate_alda_labor_table(self) -> Dict[str, Any]:
         result = await self.intake.intake_from_alda()
         if result.get("status") != "ok":
-            data = {"active_units": 24, "completed_units": 1560, "failed_units": 3, "avg_processing_time": 45.2, "determinism_level": "strict"}
+            data = {
+                "active_units": 24,
+                "completed_units": 1560,
+                "failed_units": 3,
+                "avg_processing_time": 45.2,
+                "determinism_level": "strict",
+            }
         else:
             data = result.get("data", {})
         failed_units_raw = data.get("failed_units", 0)
-        failed_units = int(failed_units_raw) if isinstance(failed_units_raw, (int, float, str)) and str(failed_units_raw).isdigit() else 0
+        failed_units = (
+            int(failed_units_raw)
+            if isinstance(failed_units_raw, (int, float, str)) and str(failed_units_raw).isdigit()
+            else 0
+        )
         table_md = """
 | ALDA Labor Metric | Value | Status |
 |-------------------|-------|--------|
@@ -446,7 +579,12 @@ class ExcelTabulator:
             avg_time=data.get("avg_processing_time", "N/A"),
             determ=data.get("determinism_level", "strict"),
         )
-        return {"type": "alda_labor", "markdown": table_md.strip(), "raw_data": data, "generated_at": datetime.now(timezone.utc).isoformat()}
+        return {
+            "type": "alda_labor",
+            "markdown": table_md.strip(),
+            "raw_data": data,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
 
     async def generate_all_tables(self) -> Dict[str, Any]:
         tables = await asyncio.gather(
@@ -471,21 +609,35 @@ class MaliCore:
         self.intelligence = IntelligenceEngine()
         self.announcements = AnnouncementLayer()
         self.tabulator = ExcelTabulator(self.intake)
-        self._stats: Dict[str, Any] = {"started_at": datetime.now(timezone.utc).isoformat(), "intake_cycles": 0, "patterns_detected": 0, "announcements_made": 0}
+        self._stats: Dict[str, Any] = {
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "intake_cycles": 0,
+            "patterns_detected": 0,
+            "announcements_made": 0,
+        }
         self._running = False
         self._cycle_interval_default: int = max(10, int(os.getenv("MALI_CYCLE_INTERVAL", "60")))
         self._cycle_interval_min: int = max(5, int(os.getenv("MALI_CYCLE_INTERVAL_MIN", "15")))
         self._cycle_interval_max: int = max(self._cycle_interval_min, int(os.getenv("MALI_CYCLE_INTERVAL_MAX", "180")))
         self._cycle_interval_step: int = max(1, int(os.getenv("MALI_CYCLE_INTERVAL_STEP", "5")))
         self._cycle_interval_current: int = self._cycle_interval_default
-        self._cycle_archive_enabled: bool = os.getenv("MALI_CYCLE_ARCHIVE_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
+        self._cycle_archive_enabled: bool = os.getenv("MALI_CYCLE_ARCHIVE_ENABLED", "true").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         self._cycle_archive_dir: str = os.getenv("MALI_CYCLE_ARCHIVE_DIR", "runtime/mali-cycles")
         self._cycle_archive_file: str = os.path.join(self._cycle_archive_dir, "cycles.jsonl")
         self._cycle_archive_rotate_mb: int = max(1, int(os.getenv("MALI_CYCLE_ARCHIVE_ROTATE_MB", "8")))
-        self._cycle_archive_max_total_mb: int = max(self._cycle_archive_rotate_mb, int(os.getenv("MALI_CYCLE_ARCHIVE_MAX_TOTAL_MB", "128")))
+        self._cycle_archive_max_total_mb: int = max(
+            self._cycle_archive_rotate_mb, int(os.getenv("MALI_CYCLE_ARCHIVE_MAX_TOTAL_MB", "128"))
+        )
         self._cycle_archive_retention_days: int = max(1, int(os.getenv("MALI_CYCLE_ARCHIVE_RETENTION_DAYS", "7")))
         self._cycle_archive_max_files: int = max(5, int(os.getenv("MALI_CYCLE_ARCHIVE_MAX_FILES", "120")))
-        self._cycle_archive_maintenance_every: int = max(1, int(os.getenv("MALI_CYCLE_ARCHIVE_MAINTENANCE_EVERY", "20")))
+        self._cycle_archive_maintenance_every: int = max(
+            1, int(os.getenv("MALI_CYCLE_ARCHIVE_MAINTENANCE_EVERY", "20"))
+        )
         self._cycle_archive_write_count: int = 0
 
     async def run_intake_cycle(self) -> Dict[str, Any]:
@@ -498,14 +650,32 @@ class MaliCore:
         correlations = self.intelligence.cross_module_correlation(intake_results)
         for pattern in patterns:
             if pattern.get("severity") == "critical":
-                self.announcements.announce(AnnouncementType.ALERT, AnnouncementPriority.HIGH, f"Critical: {pattern.get('type')}", f"Value: {pattern.get('value')}, Threshold: {pattern.get('threshold')}", "mali_intelligence", pattern)
+                self.announcements.announce(AnnouncementType.ALERT, AnnouncementPriority.HIGH, f"Critical: {
+                        pattern.get('type')}", f"Value: {
+                        pattern.get('value')}, Threshold: {
+                        pattern.get('threshold')}", "mali_intelligence", pattern)
         for correlation in correlations:
-            self.announcements.announce(AnnouncementType.INSIGHT, AnnouncementPriority.MEDIUM, correlation.get("type", "Correlation"), correlation.get("description", ""), "mali_correlation", correlation, [correlation.get("recommendation", "")])
+            self.announcements.announce(
+                AnnouncementType.INSIGHT,
+                AnnouncementPriority.MEDIUM,
+                correlation.get("type", "Correlation"),
+                correlation.get("description", ""),
+                "mali_correlation",
+                correlation,
+                [correlation.get("recommendation", "")],
+            )
         self._stats["intake_cycles"] += 1
         self._stats["patterns_detected"] += len(patterns)
         self._stats["announcements_made"] = len(self.announcements._announcements)
         reached_sources = len([r for r in intake_results.values() if isinstance(r, dict) and r.get("status") == "ok"])
-        cycle_result = {"cycle": self._stats["intake_cycles"], "sources_reached": reached_sources, "patterns_found": len(patterns), "correlations": len(correlations), "timestamp": datetime.now(timezone.utc).isoformat(), "next_interval_seconds": self._cycle_interval_current}
+        cycle_result = {
+            "cycle": self._stats["intake_cycles"],
+            "sources_reached": reached_sources,
+            "patterns_found": len(patterns),
+            "correlations": len(correlations),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "next_interval_seconds": self._cycle_interval_current,
+        }
         self._persist_cycle_snapshot(cycle_result, intake_results)
         self._cycle_interval_current = self._compute_next_interval(cycle_result)
         cycle_result["next_interval_seconds"] = self._cycle_interval_current
@@ -528,7 +698,15 @@ class MaliCore:
             return
         try:
             os.makedirs(self._cycle_archive_dir, exist_ok=True)
-            snapshot = {"timestamp": cycle_result.get("timestamp"), "cycle": cycle_result.get("cycle"), "sources_reached": cycle_result.get("sources_reached"), "patterns_found": cycle_result.get("patterns_found"), "correlations": cycle_result.get("correlations"), "next_interval_seconds": cycle_result.get("next_interval_seconds"), "source_keys": self._extract_source_keys(intake_results)}
+            snapshot = {
+                "timestamp": cycle_result.get("timestamp"),
+                "cycle": cycle_result.get("cycle"),
+                "sources_reached": cycle_result.get("sources_reached"),
+                "patterns_found": cycle_result.get("patterns_found"),
+                "correlations": cycle_result.get("correlations"),
+                "next_interval_seconds": cycle_result.get("next_interval_seconds"),
+                "source_keys": self._extract_source_keys(intake_results),
+            }
             with open(self._cycle_archive_file, "a", encoding="utf-8") as archive_file:
                 archive_file.write(json.dumps(snapshot, ensure_ascii=False) + "\n")
             self._cycle_archive_write_count += 1
@@ -618,7 +796,9 @@ class MaliCore:
                 await asyncio.sleep(self._cycle_interval_current)
             except Exception as exc:
                 logger.error(f"MALI cycle error: {exc}")
-                self._cycle_interval_current = max(self._cycle_interval_min, self._cycle_interval_current - self._cycle_interval_step)
+                self._cycle_interval_current = max(
+                    self._cycle_interval_min, self._cycle_interval_current - self._cycle_interval_step
+                )
                 await asyncio.sleep(self._cycle_interval_current)
 
     def stop_monitoring(self) -> None:
@@ -631,7 +811,20 @@ class MaliCore:
         recent_announcements = self.announcements.get_recent(20)
         patterns = self.intelligence._patterns[-50:]
         correlations = self.intelligence._correlations[-20:]
-        report = {"title": "MALI Comprehensive System Report", "generated_at": datetime.now(timezone.utc).isoformat(), "summary": {"intake_cycles": self._stats["intake_cycles"], "patterns_detected": self._stats["patterns_detected"], "announcements": self._stats["announcements_made"]}, "tables": tables, "recent_announcements": recent_announcements, "patterns": patterns, "correlations": correlations, "source_status": self.intake.get_source_status()}
+        report = {
+            "title": "MALI Comprehensive System Report",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "summary": {
+                "intake_cycles": self._stats["intake_cycles"],
+                "patterns_detected": self._stats["patterns_detected"],
+                "announcements": self._stats["announcements_made"],
+            },
+            "tables": tables,
+            "recent_announcements": recent_announcements,
+            "patterns": patterns,
+            "correlations": correlations,
+            "source_status": self.intake.get_source_status(),
+        }
         report["markdown"] = self._generate_markdown_report(report)
         return report
 
@@ -677,7 +870,19 @@ class MaliCore:
         return md
 
     def get_stats(self) -> Dict[str, Any]:
-        return {**self._stats, "running": self._running, "cycle_interval": {"current_seconds": self._cycle_interval_current, "default_seconds": self._cycle_interval_default, "min_seconds": self._cycle_interval_min, "max_seconds": self._cycle_interval_max, "step_seconds": self._cycle_interval_step}, "cycle_archive": {"enabled": self._cycle_archive_enabled, "path": self._cycle_archive_file}, "sources": self.intake.get_source_status()}
+        return {
+            **self._stats,
+            "running": self._running,
+            "cycle_interval": {
+                "current_seconds": self._cycle_interval_current,
+                "default_seconds": self._cycle_interval_default,
+                "min_seconds": self._cycle_interval_min,
+                "max_seconds": self._cycle_interval_max,
+                "step_seconds": self._cycle_interval_step,
+            },
+            "cycle_archive": {"enabled": self._cycle_archive_enabled, "path": self._cycle_archive_file},
+            "sources": self.intake.get_source_status(),
+        }
 
 
 _mali_core: Optional[MaliCore] = None

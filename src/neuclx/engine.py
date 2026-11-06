@@ -45,14 +45,18 @@ class CognitiveKernel:
     def answer(self, query: str) -> Datum:
         wanted = set(self._tokens(query))
         if not self.knowledge:
-            return self.sandbox.release(Datum(None, EvidenceState.UNAVAILABLE, method="knowledge-store-empty", metadata={"evidence_chain": []}))
+            return self.sandbox.release(
+                Datum(None, EvidenceState.UNAVAILABLE, method="knowledge-store-empty", metadata={"evidence_chain": []})
+            )
         ranked = []
         for digest, tokens in self.knowledge.items():
             overlap = len(wanted.intersection(tokens))
             ranked.append((overlap, digest, tokens))
         overlap, digest, tokens = max(ranked, key=lambda row: (row[0], row[1]))
         if overlap == 0:
-            return self.sandbox.release(Datum(None, EvidenceState.UNAVAILABLE, method="zero-token-overlap", metadata={"evidence_chain": []}))
+            return self.sandbox.release(
+                Datum(None, EvidenceState.UNAVAILABLE, method="zero-token-overlap", metadata={"evidence_chain": []})
+            )
         matching_terms = sorted(wanted.intersection(tokens))
         score = overlap / max(1, len(wanted))
         return self.sandbox.release(
@@ -60,7 +64,9 @@ class CognitiveKernel:
                 {"source_digest": digest, "matching_terms": matching_terms, "score": score},
                 EvidenceState.COMPUTED,
                 method="deterministic-token-overlap",
-                metadata={"evidence_chain": [{"source_digest": digest, "matching_terms": matching_terms, "score": score}]},
+                metadata={
+                    "evidence_chain": [{"source_digest": digest, "matching_terms": matching_terms, "score": score}]
+                },
             )
         )
 
@@ -74,7 +80,9 @@ class ReasoningPipeline:
 
     @staticmethod
     def _normalize(question: str) -> str:
-        return " ".join(word.strip(".,:;!?()[]{}\"'") for word in (question or "").split() if word.strip(".,:;!?()[]{}\"'"))
+        return " ".join(
+            word.strip(".,:;!?()[]{}\"'") for word in (question or "").split() if word.strip(".,:;!?()[]{}\"'")
+        )
 
     @staticmethod
     def _choose_agent(question: str, facts: list[str]) -> str:
@@ -93,19 +101,40 @@ class ReasoningPipeline:
         lowered = (question or "").casefold()
         if "jona" in lowered or "sandbox" in lowered or "policy" in lowered:
             if any("sandbox" in fact.casefold() for fact in facts):
-                return "JONA është kufiri i policy-s dhe sandbox-it: ai rregullon çfarë lejohet të dalë nga sistemi dhe ndalon të dhëna të pa-verifikuara."
-            return "JONA është kufiri i sigurisë së NeuCLX: çdo dalje duhet të kalojë kontrollin e evidencës dhe policy-s."
+                return (
+                    "JONA është kufiri i policy-s dhe sandbox-it: ai rregullon çfarë lejohet të dalë nga sistemi "
+                    "dhe ndalon të dhëna të pa-verifikuara."
+                )
+            return (
+                "JONA është kufiri i sigurisë së NeuCLX: çdo dalje duhet të kalojë kontrollin e evidencës dhe policy-s."
+            )
         if "bridge" in lowered or "manifest" in lowered or "evidence" in lowered:
-            return "Bridge e kontrollon burimin, manifestin dhe evidencën përpara se të hyjë në kernel; kjo e bën rrjedhën e vendimeve të verifikueshme."
+            return (
+                "Bridge e kontrollon burimin, manifestin dhe evidencën përpara se të hyjë në kernel; "
+                "kjo e bën rrjedhën e vendimeve të verifikueshme."
+            )
         if "ui" in lowered or "frontend" in lowered or "memory" in lowered:
-            return "NeuCLX ka një UI të thjeshtë dhe memory reale në SQLite, me të dhëna të ruajtura vetëm kur janë measured ose computed."
+            return (
+                "NeuCLX ka një UI të thjeshtë dhe memory reale në SQLite, me të dhëna të ruajtura vetëm "
+                "kur janë measured ose computed."
+            )
         if state is EvidenceState.UNAVAILABLE:
-            return "Nuk ka pasur mbivendosje të qartë midis pyetjes dhe evidencës së ruajtur; kërkesa mbetet e pa-verifikuar."
+            return (
+                "Nuk ka pasur mbivendosje të qartë midis pyetjes dhe evidencës së ruajtur; "
+                "kërkesa mbetet e pa-verifikuar."
+            )
         if facts:
-            return "Rrjedha e arsyetimit bazon përgjigjen në përputhje me faktet e dhëna dhe në kontrollin e evidencës së vetme."
-        return "Përgjigja është e bazuar në verifikimin e hapave të rrjedhës: nxjerrja, përshtatja dhe kontrolli i JONA."
+            return (
+                "Rrjedha e arsyetimit bazon përgjigjen në përputhje me faktet e dhëna "
+                "dhe në kontrollin e evidencës së vetme."
+            )
+        return (
+            "Përgjigja është e bazuar në verifikimin e hapave të rrjedhës: nxjerrja, përshtatja dhe kontrolli i JONA."
+        )
 
-    def run(self, question: str, facts: list[str] | None = None, *, context: dict[str, Any] | None = None) -> dict[str, Any]:
+    def run(
+        self, question: str, facts: list[str] | None = None, *, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         cleaned_question = self._normalize(question)
         fact_list = [fact.strip() for fact in (facts or []) if isinstance(fact, str) and fact.strip()]
         context = context or {}
@@ -118,13 +147,17 @@ class ReasoningPipeline:
             steps.append({"step": "ingest_fact", "fact": fact, "status": "ok"})
 
         evidence = self.kernel.answer(cleaned_question)
-        steps.append({"step": "kernel_match", "state": evidence.state.value, "value": evidence.value, "method": evidence.method})
+        steps.append(
+            {"step": "kernel_match", "state": evidence.state.value, "value": evidence.value, "method": evidence.method}
+        )
 
         agent_name = self._choose_agent(cleaned_question, fact_list)
         answer = self._build_answer(cleaned_question, fact_list, evidence.state)
 
         if context.get("require_jona_gate"):
-            gate = self.kernel.sandbox.evaluate(Datum(answer, EvidenceState.COMPUTED, source="pipeline", method="reasoning_pipeline"))
+            gate = self.kernel.sandbox.evaluate(
+                Datum(answer, EvidenceState.COMPUTED, source="pipeline", method="reasoning_pipeline")
+            )
             steps.append({"step": "jona_gate", "decision": gate.value})
 
         return {
@@ -137,4 +170,3 @@ class ReasoningPipeline:
             "steps": steps,
             "evidence": evidence.value,
         }
-

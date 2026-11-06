@@ -54,7 +54,14 @@ class PublicWebReaderTests(unittest.TestCase):
         chain = datum.metadata["evidence_chain"]
         self.assertEqual(len(chain), 3)
         self.assertEqual(len({hit["excerpt"] for hit in chain}), 3)
-        self.assertEqual(len(self.make_reader().read("Python standard library guide", "https://docs.example/python", 1).metadata["evidence_chain"]), 1)
+        self.assertEqual(
+            len(
+                self.make_reader()
+                .read("Python standard library guide", "https://docs.example/python", 1)
+                .metadata["evidence_chain"]
+            ),
+            1,
+        )
         self.assertEqual({hit["sha256"] for hit in chain}, {hashlib.sha256(self.body).hexdigest()})
         with self.assertRaises(ValueError):
             self.make_reader().read("python", "https://docs.example/python", 0)
@@ -68,9 +75,7 @@ class PublicWebReaderTests(unittest.TestCase):
 
     def test_rejects_private_dns_answers(self):
         reader = PublicWebReader(
-            resolver=lambda *_args, **_kwargs: [
-                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 443))
-            ],
+            resolver=lambda *_args, **_kwargs: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 443))],
             transport=lambda *_: self.fail("transport must not run"),
         )
 

@@ -8,8 +8,6 @@ import json
 import sqlite3
 from typing import List, Optional
 
-from .bridge.source_manifest import EvidenceState
-
 
 @dataclass(frozen=True)
 class MemoryEntry:
@@ -56,8 +54,7 @@ class EvidenceMemory:
         return False
 
     def _initialize(self):
-        self._connection.execute(
-            """
+        self._connection.execute("""
             CREATE TABLE IF NOT EXISTS memory_entries (
                 key TEXT PRIMARY KEY,
                 content TEXT NOT NULL,
@@ -65,8 +62,7 @@ class EvidenceMemory:
                 evidence_state TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
-            """
-        )
+            """)
         self._connection.commit()
 
     def _connect(self) -> sqlite3.Connection:
@@ -84,7 +80,9 @@ class EvidenceMemory:
             content = json.dumps(value, ensure_ascii=False, sort_keys=True)
         else:
             content = str(value)
-        payload = json.dumps({"value": value, "source": datum.source, "method": datum.method}, ensure_ascii=False, sort_keys=True)
+        payload = json.dumps(
+            {"value": value, "source": datum.source, "method": datum.method}, ensure_ascii=False, sort_keys=True
+        )
         key = f"{datum.method or 'datum'}:{abs(hash(payload))}"
         created_at = datetime.now(UTC).isoformat()
         return MemoryEntry(
@@ -105,7 +103,8 @@ class EvidenceMemory:
         self._validate_entry(entry)
         with self._connect() as connection:
             connection.execute(
-                "INSERT OR REPLACE INTO memory_entries(key, content, source_id, evidence_state, created_at) VALUES(?,?,?,?,?)",
+                "INSERT OR REPLACE INTO memory_entries("
+                "key, content, source_id, evidence_state, created_at) VALUES(?,?,?,?,?)",
                 entry.to_row(),
             )
         return entry
@@ -124,7 +123,8 @@ class EvidenceMemory:
         needle = f"%{query.lower()}%"
         with self._connect() as connection:
             rows = connection.execute(
-                "SELECT key, content, source_id, evidence_state, created_at FROM memory_entries WHERE lower(content) LIKE ? ORDER BY created_at DESC LIMIT ?",
+                "SELECT key, content, source_id, evidence_state, created_at "
+                "FROM memory_entries WHERE lower(content) LIKE ? ORDER BY created_at DESC LIMIT ?",
                 (needle, limit),
             ).fetchall()
         return [MemoryEntry(*row) for row in rows]
@@ -132,6 +132,7 @@ class EvidenceMemory:
     def list_all(self) -> List[MemoryEntry]:
         with self._connect() as connection:
             rows = connection.execute(
-                "SELECT key, content, source_id, evidence_state, created_at FROM memory_entries ORDER BY created_at DESC"
+                "SELECT key, content, source_id, evidence_state, created_at "
+                "FROM memory_entries ORDER BY created_at DESC"
             ).fetchall()
         return [MemoryEntry(*row) for row in rows]

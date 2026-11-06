@@ -15,7 +15,6 @@ from .jona import JonaSandbox
 from .megalayer import MegaLayerAdapter, UPSTREAM_REVISION as MEGALAYER_REVISION
 from .pipeline import PipelineDefinition, PipelineRunner, PipelineStage
 
-
 ALPHABET_CONTRACT_REVISION = "3a7eb115a71f063dc0bb7b54664583a1c4a2b08c"
 FLUID_CONTRACT_REVISION = "c673de4c8e51321520250c9539ef4535a196d919"
 _MAX_RESPONSE_BYTES = 1_000_000
@@ -229,11 +228,7 @@ class AlphabetLayerAdapter:
 
     @staticmethod
     def _finite_number(value) -> bool:
-        return (
-            not isinstance(value, bool)
-            and isinstance(value, (int, float))
-            and math.isfinite(value)
-        )
+        return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
 
 
 class FluidEngineAdapter:
@@ -259,9 +254,7 @@ class FluidEngineAdapter:
 
     def execute(self, input_data: str, jona: JonaSandbox) -> Datum:
         if not self.endpoint or not self.pipeline_name:
-            raise HybridFluidNotConfigured(
-                "FluidEngine URL and NEUCLX_FLUID_PIPELINE_NAME must be configured"
-            )
+            raise HybridFluidNotConfigured("FluidEngine URL and NEUCLX_FLUID_PIPELINE_NAME must be configured")
         path = "/api/fluid/execute"
         _authorize_request(
             jona,

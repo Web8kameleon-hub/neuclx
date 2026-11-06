@@ -30,7 +30,10 @@ class EvidenceFilter:
             record["_score"] = self._score(query, content, record)
             ranked.append(record)
 
-        ranked.sort(key=lambda item: (item.get("_score", 0.0), item.get("confidence", 0.0), item.get("timestamp", 0)), reverse=True)
+        ranked.sort(
+            key=lambda item: (item.get("_score", 0.0), item.get("confidence", 0.0), item.get("timestamp", 0)),
+            reverse=True,
+        )
         return ranked[:top_k]
 
     def _retrieve_raw(self, query: str, top_k: int):

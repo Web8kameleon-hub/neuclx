@@ -107,7 +107,13 @@ class StableReasoningEngine:
                 "derived_facts": [],
                 "operations": [],
                 "evidence_path": [],
-                "trace": {"task_id": request_id, "task": task_text, "steps": [], "confidence": 0.0, "created_at": time.time()},
+                "trace": {
+                    "task_id": request_id,
+                    "task": task_text,
+                    "steps": [],
+                    "confidence": 0.0,
+                    "created_at": time.time(),
+                },
                 "status": "rejected_no_evidence",
                 "task_id": request_id,
             }
@@ -129,7 +135,13 @@ class StableReasoningEngine:
                 "derived_facts": [],
                 "operations": [],
                 "evidence_path": [self._content_of(item) for item in evidence],
-                "trace": {"task_id": request_id, "task": task_text, "steps": [], "confidence": 0.0, "created_at": time.time()},
+                "trace": {
+                    "task_id": request_id,
+                    "task": task_text,
+                    "steps": [],
+                    "confidence": 0.0,
+                    "created_at": time.time(),
+                },
                 "status": "rejected_jona",
                 "task_id": request_id,
             }
@@ -230,7 +242,9 @@ class StableReasoningEngine:
         for item in evidence:
             content = self._content_of(item)
             content_lower = content.casefold()
-            if "jona" in lowered and ("jona" in content_lower or "policy" in content_lower or "guardrail" in content_lower):
+            if "jona" in lowered and (
+                "jona" in content_lower or "policy" in content_lower or "guardrail" in content_lower
+            ):
                 return content
             if any(token in content_lower for token in ["provenance", "memory", "evidence", "seed"]):
                 return content
@@ -268,7 +282,9 @@ class StableReasoningEngine:
     def _persist_trace(self, task: str, conclusion: str, evidence: List[str], payload: Dict[str, Any]) -> None:
         if not hasattr(self.memory, "store"):
             return
-        serialized = json.dumps({"task": task, "conclusion": conclusion, "evidence": evidence[:5]}, ensure_ascii=False, sort_keys=True)
+        serialized = json.dumps(
+            {"task": task, "conclusion": conclusion, "evidence": evidence[:5]}, ensure_ascii=False, sort_keys=True
+        )
         digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()[:16]
         entry = MemoryEntry(
             key=f"stable:{digest}",

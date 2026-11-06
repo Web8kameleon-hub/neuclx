@@ -1,6 +1,6 @@
 import unittest
 
-from neuclx.bridge.evidence_contract import EvidenceContract, ContractViolation
+from neuclx.bridge.evidence_contract import EvidenceContract
 from neuclx.bridge.jona_guard import JonaGuard
 from neuclx.bridge.repo_registry import RepoRegistry
 from neuclx.bridge.source_manifest import EvidenceState, SourceManifest
@@ -62,17 +62,19 @@ class BridgeContractTests(unittest.TestCase):
         self.assertEqual(normalized["source_id"], "repo-1")
 
         validator = DataValidator(EvidenceContract.default())
-        valid = validator.validate_record({
-            "id": "r-1",
-            "name": "demo-record",
-            "source_type": "repo",
-            "location": "https://example.com",
-            "hash": "abc",
-            "license": "MIT",
-            "timestamp": "2026-01-01T00:00:00+00:00",
-            "evidence_state": "computed",
-            "content": "hello world",
-        })
+        valid = validator.validate_record(
+            {
+                "id": "r-1",
+                "name": "demo-record",
+                "source_type": "repo",
+                "location": "https://example.com",
+                "hash": "abc",
+                "license": "MIT",
+                "timestamp": "2026-01-01T00:00:00+00:00",
+                "evidence_state": "computed",
+                "content": "hello world",
+            }
+        )
         self.assertTrue(valid)
 
     def test_data_validator_rejects_jona_denial(self):

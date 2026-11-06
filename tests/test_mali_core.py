@@ -8,7 +8,11 @@ class MaliCoreTests(unittest.TestCase):
     def test_mali_cycle_runs_without_external_services(self):
         async def run_test():
             core = MaliCore()
-            core.intake._fetch_json_with_failover = lambda source, urls: {"source": source, "status": "error", "error": "offline"}
+            core.intake._fetch_json_with_failover = lambda source, urls: {
+                "source": source,
+                "status": "error",
+                "error": "offline",
+            }
             result = await core.run_intake_cycle()
             self.assertIn("cycle", result)
             self.assertIn("sources_reached", result)

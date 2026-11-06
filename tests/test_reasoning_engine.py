@@ -79,7 +79,8 @@ class ReasoningEngineTests(unittest.TestCase):
     def test_reasoning_engine_solves_english_simple_numeric_logic(self):
         engine = ReasoningEngine()
         result = engine.reason(
-            "If 3 students each have 2 books and one gives 1 book to someone without one, how many books are there in total?",
+            "If 3 students each have 2 books and one gives 1 book to someone without one, "
+            "how many books are there in total?",
             context=[],
             max_iterations=2,
         )

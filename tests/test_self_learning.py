@@ -63,7 +63,6 @@ class SelfLearningTests(unittest.TestCase):
         self.assertEqual(grounding["cited_sources"], [hit["source"]])
         self.assertGreaterEqual(grounding["answer_term_overlap"], 0.5)
 
-
     def test_newdata_flags_first_occurrence_only_and_stays_out_of_corpus(self):
         before = self.learning.status().value["documents"]
         facets = {"mode": "hybrid-fluid", "model": "local:x", "sources": "example.org"}

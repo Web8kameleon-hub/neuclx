@@ -25,7 +25,10 @@ class JonaGuardEnhanced(JonaSandbox):
         evidence_text = " ".join(str(item.get("content", "")) for item in evidence_list)
         response_lower = response_text.casefold()
         evidence_lower = evidence_text.casefold()
-        if any(phrase in response_lower for phrase in ["pa proof", "without proof", "no proof", "pa evidence", "without evidence", "no evidence"]):
+        if any(
+            phrase in response_lower
+            for phrase in ["pa proof", "without proof", "no proof", "pa evidence", "without evidence", "no evidence"]
+        ):
             return False
         if "rrumbullak" in evidence_lower and "shesht" in response_lower:
             return False

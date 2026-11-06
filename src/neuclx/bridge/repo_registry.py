@@ -43,4 +43,6 @@ class RepoRegistry:
         if directory:
             os.makedirs(directory, exist_ok=True)
         with open(self.storage_path, "w", encoding="utf-8") as handle:
-            json.dump([manifest.to_dict() for manifest in self.manifests.values()], handle, indent=2, ensure_ascii=False)
+            json.dump(
+                [manifest.to_dict() for manifest in self.manifests.values()], handle, indent=2, ensure_ascii=False
+            )

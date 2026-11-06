@@ -37,7 +37,14 @@ class CreativeTensor:
             self.output_hash = self._compute_tensor_hash()
 
     def _compute_tensor_hash(self) -> str:
-        payload = f"{self.prompt}|{self.seed}|{self.modality}|{self.model_name}|{self.safety_score}|{self.fidelity_score}|{self.output_path or ''}"
+        payload = f"{
+            self.prompt}|{
+            self.seed}|{
+            self.modality}|{
+                self.model_name}|{
+                    self.safety_score}|{
+                        self.fidelity_score}|{
+                            self.output_path or ''}"
         return sha256(payload.encode("utf-8")).hexdigest()
 
     def to_dict(self) -> Dict[str, Any]:

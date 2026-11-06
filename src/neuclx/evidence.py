@@ -28,5 +28,10 @@ class Datum:
             raise ValueError(f"{self.state} data must have value=None")
 
     def as_dict(self):
-        return {"value": self.value, "state": self.state.value, "source": self.source, "method": self.method, "metadata": dict(self.metadata)}
-
+        return {
+            "value": self.value,
+            "state": self.state.value,
+            "source": self.source,
+            "method": self.method,
+            "metadata": dict(self.metadata),
+        }

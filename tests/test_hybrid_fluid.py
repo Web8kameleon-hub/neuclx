@@ -42,30 +42,36 @@ def start_upstream(*, bad_alphabet=False):
             path = urlparse(self.path).path
             received.append(("GET", path))
             if path == "/health":
-                self._send({
-                    "status": "healthy",
-                    "service": "alphabet-layers",
-                    "letters": 60 if bad_alphabet else 61,
-                    "layers": 61,
-                })
+                self._send(
+                    {
+                        "status": "healthy",
+                        "service": "alphabet-layers",
+                        "letters": 60 if bad_alphabet else 61,
+                        "layers": 61,
+                    }
+                )
             elif path == "/api/v1/alphabet/stats":
-                self._send({
-                    "total_layers": 63,
-                    "base_layers": 61,
-                    "greek_letters": 24 if bad_alphabet else 25,
-                    "albanian_letters": 36,
-                    "meta_layer": True,
-                })
+                self._send(
+                    {
+                        "total_layers": 63,
+                        "base_layers": 61,
+                        "greek_letters": 24 if bad_alphabet else 25,
+                        "albanian_letters": 36,
+                        "meta_layer": True,
+                    }
+                )
             elif path == "/api/v1/alphabet/consciousness":
-                self._send({
-                    "text_length": len(query),
-                    "consciousness_level": 0.41,
-                    "peak_consciousness": 0.9,
-                    "variance": 0.02,
-                    "harmony": 0.98,
-                    "dominant_frequency": 2.0,
-                    "phi_alignment": 0.7,
-                })
+                self._send(
+                    {
+                        "text_length": len(query),
+                        "consciousness_level": 0.41,
+                        "peak_consciousness": 0.9,
+                        "variance": 0.02,
+                        "harmony": 0.98,
+                        "dominant_frequency": 2.0,
+                        "phi_alignment": 0.7,
+                    }
+                )
             else:
                 self.send_error(404)
 
@@ -74,20 +80,24 @@ def start_upstream(*, bad_alphabet=False):
             body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             received.append(("POST", path, body))
             if path == "/api/v1/alphabet/process":
-                self._send({
-                    "alphabet_size": 61,
-                    "active_layers": 61,
-                    "total_complexity": 0.5,
-                })
+                self._send(
+                    {
+                        "alphabet_size": 61,
+                        "active_layers": 61,
+                        "total_complexity": 0.5,
+                    }
+                )
             elif path == "/process":
-                self._send({
-                    "unique_signature": "fixture-signature",
-                    "combinations_used": 72,
-                    "theoretical_max": 1000,
-                    "processing_ms": 4.5,
-                    "complexity_score": 0.7,
-                    "total_layers_engaged": 12,
-                })
+                self._send(
+                    {
+                        "unique_signature": "fixture-signature",
+                        "combinations_used": 72,
+                        "theoretical_max": 1000,
+                        "processing_ms": 4.5,
+                        "complexity_score": 0.7,
+                        "total_layers_engaged": 12,
+                    }
+                )
             elif path == "/api/fluid/execute":
                 self._send({"result": {"status": "fixture-computed"}})
             else:
@@ -128,17 +138,11 @@ class HybridFluidTests(unittest.TestCase):
         self.assertEqual(len(result.metadata["stages"]), 11)
         self.assertEqual(result.metadata["stages"][-1]["name"], "11-jona-record")
         self.assertEqual(result.value["wave_indices"]["state"], "computed")
-        self.assertTrue(
-            result.value["wave_indices"]["metadata"]["interpretation"].startswith("computed indices")
-        )
+        self.assertTrue(result.value["wave_indices"]["metadata"]["interpretation"].startswith("computed indices"))
         self.assertEqual(result.value["megalayer"]["value"]["unique_signature"], "fixture-signature")
         self.assertEqual(result.value["fluid_engine"]["value"]["result"]["status"], "fixture-computed")
         self.assertEqual(pipeline.ledger.records[0][0], "Kush je ti?")
-        fluid_request = next(
-            entry[2]
-            for entry in received
-            if len(entry) == 3 and entry[1] == "/api/fluid/execute"
-        )
+        fluid_request = next(entry[2] for entry in received if len(entry) == 3 and entry[1] == "/api/fluid/execute")
         fluid_input = json.loads(fluid_request["inputData"])
         self.assertEqual(fluid_request["pipelineName"], "FlowPipeline")
         self.assertEqual(

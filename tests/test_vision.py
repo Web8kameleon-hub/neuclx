@@ -11,10 +11,7 @@ from urllib import request
 from neuclx.vision_encoder import VisionEncoder
 from neuclx.web import NeuCLXApplication, handler_factory
 
-
-PNG_1X1_BASE64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5Y8ZkAAAAASUVORK5CYII="
-)
+PNG_1X1_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5Y8ZkAAAAASUVORK5CYII="
 
 
 class VisionEncoderTests(unittest.TestCase):
@@ -54,7 +51,9 @@ class VisionApiTests(unittest.TestCase):
         temp_path.write_bytes(png_bytes)
         server, app, port, thread = self._server_for()
         try:
-            payload = json.dumps({"task": "Inspect image", "image_path": str(temp_path), "author": "tester"}).encode("utf-8")
+            payload = json.dumps({"task": "Inspect image", "image_path": str(temp_path), "author": "tester"}).encode(
+                "utf-8"
+            )
             req = request.Request(
                 f"http://127.0.0.1:{port}/api/v1/vision/inspect",
                 data=payload,

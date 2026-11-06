@@ -45,7 +45,9 @@ class ImageGenerator:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def generate(self, prompt: str, *, seed: int = 42, style: str = "clean", author: str | None = None, **kwargs: Any) -> tuple[str, str]:
+    def generate(
+        self, prompt: str, *, seed: int = 42, style: str = "clean", author: str | None = None, **kwargs: Any
+    ) -> tuple[str, str]:
         key = sha256(f"{prompt}|{seed}|{style}|{author or ''}".encode()).hexdigest()[:12]
         output_path = self.output_dir / f"creative_{key}.svg"
         svg_text = self._build_svg(prompt=prompt, seed=seed, style=style, author=author, extra=kwargs)
@@ -68,27 +70,45 @@ class ImageGenerator:
             x = 60 + index * 110
             y = 120 + ((seed + index * 17) % 80)
             radius = 24 + (seed + index * 7) % 18
-            circles.append(f'<circle cx="{x}" cy="{y}" r="{radius}" fill="{palette[index % len(palette)]}" opacity="0.86" />')
+            circles.append(
+                f'<circle cx="{x}" cy="{y}" r="{radius}" fill="{palette[index % len(palette)]}" opacity="0.86" />'
+            )
 
         bars = []
         for index, value in enumerate((seed % 7 + 1, seed % 5 + 2, seed % 3 + 3)):
-            bars.append(f'<rect x="{100 + index * 140}" y="{290 - value * 18}" width="70" height="{value * 18}" rx="8" fill="{accent}" opacity="0.78" />')
+            bars.append(f'<rect x="{
+                    100 +
+                    index *
+                    140}" y="{
+                    290 -
+                    value *
+                    18}" width="70" height="{
+                    value *
+                    18}" rx="8" fill="{accent}" opacity="0.78" />')
 
-        return (
-            '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420" role="img" aria-labelledby="title desc">'
-            f'<title>{self._escape(label)}</title>'
-            f'<desc>{self._escape(prompt)}</desc>'
-            f'<rect width="800" height="420" fill="#10131f" />'
-            f'<circle cx="660" cy="80" r="120" fill="{palette[0]}" opacity="0.18" />'
-            f'<circle cx="140" cy="330" r="140" fill="{palette[1]}" opacity="0.15" />'
-            f'<text x="40" y="54" fill="#f7f7fb" font-family="Georgia, serif" font-size="28" font-weight="700">{self._escape(label)}</text>'
-            f'<text x="40" y="86" fill="#cfd6ff" font-family="Consolas, monospace" font-size="14">{self._escape(subtitle)}</text>'
-            + "".join(circles)
-            + "".join(bars)
-            + '<rect x="40" y="340" width="720" height="42" rx="12" fill="#ffffff" opacity="0.05" />'
-            + f'<text x="60" y="368" fill="#e8ecff" font-family="Consolas, monospace" font-size="12">prompt_hash={sha256(prompt.encode("utf-8")).hexdigest()[:16]}</text>'
-            + f'<text x="60" y="390" fill="#e8ecff" font-family="Consolas, monospace" font-size="12">seed={seed} · style={self._escape(style)} · deterministic</text>'
-            + '</svg>'
+        prompt_hash = sha256(prompt.encode("utf-8")).hexdigest()[:16]
+        return "".join(
+            (
+                '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" '
+                'viewBox="0 0 800 420" role="img" aria-labelledby="title desc">',
+                f"<title>{self._escape(label)}</title>",
+                f"<desc>{self._escape(prompt)}</desc>",
+                '<rect width="800" height="420" fill="#10131f" />',
+                f'<circle cx="660" cy="80" r="120" fill="{palette[0]}" opacity="0.18" />',
+                f'<circle cx="140" cy="330" r="140" fill="{palette[1]}" opacity="0.15" />',
+                f'<text x="40" y="54" fill="#f7f7fb" font-family="Georgia, serif" '
+                f'font-size="28" font-weight="700">{self._escape(label)}</text>',
+                f'<text x="40" y="86" fill="#cfd6ff" font-family="Consolas, monospace" '
+                f'font-size="14">{self._escape(subtitle)}</text>',
+                "".join(circles),
+                "".join(bars),
+                '<rect x="40" y="340" width="720" height="42" rx="12" fill="#ffffff" opacity="0.05" />',
+                f'<text x="60" y="368" fill="#e8ecff" font-family="Consolas, monospace" '
+                f'font-size="12">prompt_hash={prompt_hash}</text>',
+                f'<text x="60" y="390" fill="#e8ecff" font-family="Consolas, monospace" '
+                f'font-size="12">seed={seed} · style={self._escape(style)} · deterministic</text>',
+                "</svg>",
+            )
         )
 
     @staticmethod
@@ -129,7 +149,16 @@ class TextGenerator:
         "Rezultati është i riprodhueshëm dhe i ruajtshëm.",
     ]
 
-    def generate(self, prompt: str, *, seed: int = 42, style: str = "clean", author: str | None = None, max_words: int = 120, **kwargs: Any) -> tuple[str, dict[str, Any]]:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        seed: int = 42,
+        style: str = "clean",
+        author: str | None = None,
+        max_words: int = 120,
+        **kwargs: Any,
+    ) -> tuple[str, dict[str, Any]]:
         rng = random.Random(sha256(f"{prompt}|{seed}|{style}|{author or ''}".encode()).hexdigest())
         words = [word.strip(".,:;!?()[]{}") for word in prompt.split() if word.strip(".,:;!?()[]{}")]
         key_words = self._top_keywords(words)
@@ -203,7 +232,19 @@ class CreativeEngine:
             return self.memory.record(prompt_text, response_datum)
         return {"status": "unavailable"}
 
-    def _build_tensor(self, *, prompt_text: str, seed: int, modality: CreativeModality, model_name: str, safety_score: float, fidelity_score: float, output_hash: str, output_path: str | None, parameters: dict[str, Any]) -> CreativeTensor:
+    def _build_tensor(
+        self,
+        *,
+        prompt_text: str,
+        seed: int,
+        modality: CreativeModality,
+        model_name: str,
+        safety_score: float,
+        fidelity_score: float,
+        output_hash: str,
+        output_path: str | None,
+        parameters: dict[str, Any],
+    ) -> CreativeTensor:
         return CreativeTensor(
             prompt=prompt_text,
             seed=seed,
@@ -236,7 +277,9 @@ class CreativeEngine:
         author = kwargs.get("author")
         generator_kwargs = {key: value for key, value in kwargs.items() if key not in {"seed", "style", "author"}}
         if normalized_modality is CreativeModality.TEXT:
-            output_text, metadata = self.text_generator.generate(prompt_text, seed=seed, style=style, author=author, **generator_kwargs)
+            output_text, metadata = self.text_generator.generate(
+                prompt_text, seed=seed, style=style, author=author, **generator_kwargs
+            )
             safety_score = 1.0 if self.guard.check_prompt(prompt_text) else 0.0
             fidelity_score = self.guard.check_fidelity(prompt_text, output_text)
             tensor = self._build_tensor(
@@ -274,7 +317,11 @@ class CreativeEngine:
                     "keywords": metadata.get("keywords", []),
                     "evidence_chain": [
                         {"source": "prompt", "matching_terms": prompt_text.split()[:6], "score": 1.0},
-                        {"source": "hvo", "matching_terms": list(metadata.get("hvo_profile", {}).keys()), "score": fidelity_score},
+                        {
+                            "source": "hvo",
+                            "matching_terms": list(metadata.get("hvo_profile", {}).keys()),
+                            "score": fidelity_score,
+                        },
                     ],
                 },
             )
@@ -293,7 +340,9 @@ class CreativeEngine:
             }
 
         if normalized_modality is CreativeModality.IMAGE:
-            output_path, output_hash = self.image_generator.generate(prompt_text, seed=seed, style=style, author=author, **generator_kwargs)
+            output_path, output_hash = self.image_generator.generate(
+                prompt_text, seed=seed, style=style, author=author, **generator_kwargs
+            )
             svg_text = Path(output_path).read_text(encoding="utf-8")
             safety_score = self.guard.check_output_svg(svg_text, prompt_text)
             fidelity_score = self.guard.check_fidelity(prompt_text, svg_text)
@@ -351,7 +400,9 @@ class CreativeEngine:
             }
 
         if normalized_modality is CreativeModality.AUDIO:
-            output_path, output_hash, metadata = self.audio_generator.generate(prompt_text, seed=seed, style=style, author=author, **generator_kwargs)
+            output_path, output_hash, metadata = self.audio_generator.generate(
+                prompt_text, seed=seed, style=style, author=author, **generator_kwargs
+            )
             audio_guard_score = self.guard.check_output_file(output_path, "audio")
             safety_score = min(audio_guard_score, metadata.get("safety_score", 1.0))
             tensor = self._build_tensor(
@@ -409,7 +460,9 @@ class CreativeEngine:
             }
 
         if normalized_modality is CreativeModality.CODE:
-            output_path, output_hash, metadata = self.code_generator.generate(prompt_text, seed=seed, style=style, author=author, **generator_kwargs)
+            output_path, output_hash, metadata = self.code_generator.generate(
+                prompt_text, seed=seed, style=style, author=author, **generator_kwargs
+            )
             code_guard_score = self.guard.check_output_file(output_path, "code")
             safety_score = min(code_guard_score, metadata.get("safety_score", 1.0))
             tensor = self._build_tensor(
@@ -466,7 +519,9 @@ class CreativeEngine:
             }
 
         if normalized_modality is CreativeModality.VIDEO:
-            output_path, output_hash, metadata = self.video_generator.generate(prompt_text, seed=seed, style=style, author=author, **generator_kwargs)
+            output_path, output_hash, metadata = self.video_generator.generate(
+                prompt_text, seed=seed, style=style, author=author, **generator_kwargs
+            )
             video_guard_score = self.guard.check_output_file(output_path, "video")
             safety_score = min(video_guard_score, metadata.get("safety_score", 1.0))
             tensor = self._build_tensor(
@@ -523,7 +578,9 @@ class CreativeEngine:
             }
 
         if normalized_modality is CreativeModality.CAD:
-            output_path, output_hash, metadata = self.cad_generator.generate(prompt_text, seed=seed, style=style, author=author, **generator_kwargs)
+            output_path, output_hash, metadata = self.cad_generator.generate(
+                prompt_text, seed=seed, style=style, author=author, **generator_kwargs
+            )
             cad_guard_score = self.guard.check_output_file(output_path, "cad")
             safety_score = min(cad_guard_score, metadata.get("safety_score", 1.0))
             tensor = self._build_tensor(

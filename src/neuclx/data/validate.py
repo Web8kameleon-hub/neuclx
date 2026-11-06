@@ -28,9 +28,7 @@ class DataValidator:
         try:
             timestamp_value = record["timestamp"]
             timestamp = (
-                timestamp_value
-                if isinstance(timestamp_value, datetime)
-                else datetime.fromisoformat(timestamp_value)
+                timestamp_value if isinstance(timestamp_value, datetime) else datetime.fromisoformat(timestamp_value)
             )
             manifest = SourceManifest(
                 id=record["id"],
@@ -45,12 +43,14 @@ class DataValidator:
                 version=record.get("version"),
             )
             valid = self.contract.validate(manifest)
-            self.sandbox.release(Datum(
-                content,
-                RuntimeEvidenceState(manifest.evidence_state.value),
-                source=manifest.location,
-                method="data:evidence-contract-validation",
-            ))
+            self.sandbox.release(
+                Datum(
+                    content,
+                    RuntimeEvidenceState(manifest.evidence_state.value),
+                    source=manifest.location,
+                    method="data:evidence-contract-validation",
+                )
+            )
             return valid
         except (ContractViolation, KeyError, PermissionError, TypeError, ValueError):
             return False

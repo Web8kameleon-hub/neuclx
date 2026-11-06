@@ -72,13 +72,15 @@ class PipelineRunner:
             output_decision = self.sandbox.evaluate(output)
             if output_decision is PolicyDecision.REJECT:
                 self.sandbox.release(output)
-            trace.append({
-                "name": stage.name,
-                "revision": stage.revision,
-                "input_state": current.state.value,
-                "output_state": output.state.value,
-                "jona_decision": output_decision.value,
-            })
+            trace.append(
+                {
+                    "name": stage.name,
+                    "revision": stage.revision,
+                    "input_state": current.state.value,
+                    "output_state": output.state.value,
+                    "jona_decision": output_decision.value,
+                }
+            )
             if output_decision is not PolicyDecision.ALLOW:
                 return self._held(pipeline, stage.name, "output", output_decision, trace)
             current = self.sandbox.release(output)

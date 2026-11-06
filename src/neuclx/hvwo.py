@@ -62,4 +62,3 @@ class HVWOLattice:
     def contract(self, axes: Iterable[Axis]) -> float:
         allowed = frozenset(axes)
         return sum(c.activation for c in self.cells.values() if c.axis in allowed)
-

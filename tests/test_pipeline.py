@@ -21,12 +21,14 @@ def measured_input(value="input"):
 class PipelineTests(unittest.TestCase):
     def test_pipeline_runs_registered_stages_and_preserves_provenance(self):
         definition = pipeline(
-            PipelineStage("uppercase", "stage-v1", lambda item: Datum(
-                item.value.upper(), EvidenceState.COMPUTED, method="uppercase"
-            )),
-            PipelineStage("suffix", "stage-v2", lambda item: Datum(
-                item.value + "!", EvidenceState.COMPUTED, method="suffix"
-            )),
+            PipelineStage(
+                "uppercase",
+                "stage-v1",
+                lambda item: Datum(item.value.upper(), EvidenceState.COMPUTED, method="uppercase"),
+            ),
+            PipelineStage(
+                "suffix", "stage-v2", lambda item: Datum(item.value + "!", EvidenceState.COMPUTED, method="suffix")
+            ),
         )
 
         result = PipelineRunner().run(definition, measured_input())
@@ -80,9 +82,9 @@ class PipelineTests(unittest.TestCase):
 
         called = []
         definition = pipeline(
-            PipelineStage("first", "v1", lambda item: Datum(
-                item.value, EvidenceState.COMPUTED, method="rejected-output"
-            )),
+            PipelineStage(
+                "first", "v1", lambda item: Datum(item.value, EvidenceState.COMPUTED, method="rejected-output")
+            ),
             PipelineStage("second", "v1", lambda item: called.append(item)),
         )
 

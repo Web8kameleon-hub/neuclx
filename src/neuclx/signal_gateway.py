@@ -13,9 +13,7 @@ from typing import Callable
 from .evidence import Datum, EvidenceState
 from .jona import JonaSandbox, PolicyDecision
 
-
-REQUIRED_CONTROLS = ('alda', 'mali', 'klajdi', 'liam', 'alba', 'albi',
-                     'blerina', 'pillar', 'albana', 'lagter')
+REQUIRED_CONTROLS = ("alda", "mali", "klajdi", "liam", "alba", "albi", "blerina", "pillar", "albana", "lagter")
 MAX_PAYLOAD_BYTES = 1_048_576
 
 
@@ -27,13 +25,12 @@ class SignalEnvelope:
     revision: str
 
     def __post_init__(self):
-        if not all(isinstance(value, str) and value.strip()
-                   for value in (self.kind, self.source, self.revision)):
-            raise ValueError('kind, source and revision are required strings')
+        if not all(isinstance(value, str) and value.strip() for value in (self.kind, self.source, self.revision)):
+            raise ValueError("kind, source and revision are required strings")
         if not isinstance(self.payload, bytes):
-            raise TypeError('payload must be immutable bytes')
+            raise TypeError("payload must be immutable bytes")
         if not self.payload or len(self.payload) > MAX_PAYLOAD_BYTES:
-            raise ValueError('payload must contain 1 to 1048576 bytes')
+            raise ValueError("payload must contain 1 to 1048576 bytes")
 
 
 class SignalGateway:
@@ -51,43 +48,58 @@ class SignalGateway:
 
     def register_control(self, name: str, callback: Callable, *, revision: str):
         if name not in REQUIRED_CONTROLS:
-            raise ValueError('unknown control')
+            raise ValueError("unknown control")
         self._register(self._controls, name, callback, revision)
 
     def register_adapter(self, kind: str, callback: Callable, *, revision: str):
         if not isinstance(kind, str) or not kind.strip():
-            raise ValueError('adapter kind is required')
+            raise ValueError("adapter kind is required")
         self._register(self._adapters, kind, callback, revision)
 
     @staticmethod
     def _register(registry, name, callback, revision):
         if not callable(callback) or not isinstance(revision, str) or not revision.strip():
-            raise ValueError('callable and explicit revision are required')
+            raise ValueError("callable and explicit revision are required")
         if name in registry:
-            raise ValueError('binding already exists')
+            raise ValueError("binding already exists")
         registry[name] = (callback, revision)
 
     def submit(self, signal: SignalEnvelope) -> Datum:
         if not isinstance(signal, SignalEnvelope):
-            raise TypeError('SignalEnvelope is required')
+            raise TypeError("SignalEnvelope is required")
         # Only byte count and digest are measured; source assertions stay declared.
-        observation = Datum({'sha256': sha256(signal.payload).hexdigest(),
-                             'byte_count': len(signal.payload)},
-                            EvidenceState.MEASURED, 'signal-gateway:local-bytes',
-                            'sha256+byte-count', metadata={
-                                'source_claim': {'state': 'declared', 'value': signal.source},
-                                'revision_claim': {'state': 'declared', 'value': signal.revision},
-                                'kind_claim': {'state': 'declared', 'value': signal.kind}})
+        observation = Datum(
+            {"sha256": sha256(signal.payload).hexdigest(), "byte_count": len(signal.payload)},
+            EvidenceState.MEASURED,
+            "signal-gateway:local-bytes",
+            "sha256+byte-count",
+            metadata={
+                "source_claim": {"state": "declared", "value": signal.source},
+                "revision_claim": {"state": "declared", "value": signal.revision},
+                "kind_claim": {"state": "declared", "value": signal.kind},
+            },
+        )
         decision = self.sandbox.evaluate(observation)
         self.sandbox.release(observation)
         if decision is not PolicyDecision.ALLOW:
-            return self.sandbox.release(Datum(None, EvidenceState.UNAVAILABLE,
-                method='signal-input-not-authorized', metadata={'jona_decision': str(decision)}))
+            return self.sandbox.release(
+                Datum(
+                    None,
+                    EvidenceState.UNAVAILABLE,
+                    method="signal-input-not-authorized",
+                    metadata={"jona_decision": str(decision)},
+                )
+            )
         missing = [name for name in REQUIRED_CONTROLS if name not in self._controls]
         if missing or signal.kind not in self._adapters:
-            return self.sandbox.release(Datum(None, EvidenceState.NOT_IMPLEMENTED,
-                method='signal-bindings-missing', metadata={
-                    'missing_controls': missing, 'missing_adapter': signal.kind not in self._adapters}))
+            return self.sandbox.release(
+                Datum(
+                    None,
+                    EvidenceState.NOT_IMPLEMENTED,
+                    method="signal-bindings-missing",
+                    metadata={"missing_controls": missing, "missing_adapter": signal.kind not in self._adapters},
+                )
+            )
         # Snapshot bindings: registration changes cannot change this admission pass.
         controls = [(name, *self._controls[name]) for name in REQUIRED_CONTROLS]
         adapter, adapter_revision = self._adapters[signal.kind]
@@ -95,43 +107,69 @@ class SignalGateway:
         for name, control, revision in controls:
             control_decision = control(signal)
             if not isinstance(control_decision, PolicyDecision):
-                raise TypeError(f'{name} must return PolicyDecision')
-            approvals.append({'control': name, 'revision': revision,
-                              'decision': control_decision.value, 'state': 'computed'})
+                raise TypeError(f"{name} must return PolicyDecision")
+            approvals.append(
+                {"control": name, "revision": revision, "decision": control_decision.value, "state": "computed"}
+            )
             if control_decision is PolicyDecision.REJECT:
-                raise PermissionError(f'{name} rejected signal')
+                raise PermissionError(f"{name} rejected signal")
             if control_decision is PolicyDecision.SANDBOX_ONLY:
-                return self.sandbox.release(Datum(None, EvidenceState.UNAVAILABLE,
-                    method='signal-review-required', metadata={'controls': approvals}))
+                return self.sandbox.release(
+                    Datum(
+                        None,
+                        EvidenceState.UNAVAILABLE,
+                        method="signal-review-required",
+                        metadata={"controls": approvals},
+                    )
+                )
         output = adapter(signal)
         if not isinstance(output, Datum):
-            raise TypeError('adapter must return Datum')
+            raise TypeError("adapter must return Datum")
         # Serialize the output through JONA; never substitute controller success.
-        return self.sandbox.release(Datum(output.value, output.state, output.source,
-            output.method, {**output.metadata, 'input_observation': observation.as_dict(),
-                            'controls': approvals, 'adapter_revision': adapter_revision}))
+        return self.sandbox.release(
+            Datum(
+                output.value,
+                output.state,
+                output.source,
+                output.method,
+                {
+                    **output.metadata,
+                    "input_observation": observation.as_dict(),
+                    "controls": approvals,
+                    "adapter_revision": adapter_revision,
+                },
+            )
+        )
 
 
 def text_features(signal: SignalEnvelope) -> Datum:
     """UTF-8 structure only; no semantic understanding or truth verification."""
-    text = signal.payload.decode('utf-8', errors='strict')
-    return Datum({'characters': len(text), 'words': len(text.split()),
-                  'lines': len(text.splitlines())}, EvidenceState.COMPUTED,
-                 method='signal:utf8-structure-v1')
+    text = signal.payload.decode("utf-8", errors="strict")
+    return Datum(
+        {"characters": len(text), "words": len(text.split()), "lines": len(text.splitlines())},
+        EvidenceState.COMPUTED,
+        method="signal:utf8-structure-v1",
+    )
 
 
 def numeric_features(signal: SignalEnvelope) -> Datum:
     """Finite JSON numeric sequences; units and physical meaning are unverified."""
-    values = json.loads(signal.payload.decode('utf-8'))
+    values = json.loads(signal.payload.decode("utf-8"))
     if not isinstance(values, list) or not values:
-        raise ValueError('nonempty JSON numeric array required')
+        raise ValueError("nonempty JSON numeric array required")
     if any(type(value) not in (int, float) or not math.isfinite(value) for value in values):
-        raise ValueError('only finite numbers are accepted')
-    return Datum({'samples': len(values), 'minimum': min(values), 'maximum': max(values)},
-                 EvidenceState.COMPUTED, method='signal:numeric-range-v1')
+        raise ValueError("only finite numbers are accepted")
+    return Datum(
+        {"samples": len(values), "minimum": min(values), "maximum": max(values)},
+        EvidenceState.COMPUTED,
+        method="signal:numeric-range-v1",
+    )
 
 
 def binary_features(signal: SignalEnvelope) -> Datum:
     """Opaque bytes only; not an audio/image/video/EEG decoder."""
-    return Datum({'bytes': len(signal.payload), 'sha256': sha256(signal.payload).hexdigest()},
-                 EvidenceState.COMPUTED, method='signal:opaque-bytes-v1')
+    return Datum(
+        {"bytes": len(signal.payload), "sha256": sha256(signal.payload).hexdigest()},
+        EvidenceState.COMPUTED,
+        method="signal:opaque-bytes-v1",
+    )

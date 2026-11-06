@@ -83,7 +83,12 @@ class SelfLearning:
             listing.append({"source": source, "bytes": size, "hits": hits, "tier": tier})
         listing.sort(key=lambda row: (-row["hits"], row["source"]))
         return Datum(
-            {"documents": len(rows), "tiers": counts, "newdata": self.newdata(), "top": listing[: max(1, min(limit, 100))]},
+            {
+                "documents": len(rows),
+                "tiers": counts,
+                "newdata": self.newdata(),
+                "top": listing[: max(1, min(limit, 100))],
+            },
             EvidenceState.COMPUTED,
             source="neuclx:self-learning",
             method="tier-classification",
@@ -112,9 +117,11 @@ class SelfLearning:
         claim = (
             "Refused by citation enforcement; no unsourced claim was released."
             if answer.state is EvidenceState.UNAVAILABLE
-            else "Model-generated response; sources were supplied as context but are declared, not verified."
-            if grounding["grounded"]
-            else "Model-generated response; no retrieved source supports it and it is not independently verified."
+            else (
+                "Model-generated response; sources were supplied as context but are declared, not verified."
+                if grounding["grounded"]
+                else "Model-generated response; no retrieved source supports it and it is not independently verified."
+            )
         )
         released = self.sandbox.release(
             Datum(
@@ -164,7 +171,10 @@ class SelfLearning:
             **result,
             "state": EvidenceState.COMPUTED.value,
             "quarantine": True,
-            "note": "Novelty means first occurrence of a signature in this store; it is not validity, truth or creativity, and newdata is never added to the retrieval corpus.",
+            "note": (
+                "Novelty means first occurrence of a signature in this store; it is not validity, truth or creativity, "
+                "and newdata is never added to the retrieval corpus."
+            ),
         }
 
     def newdata(self) -> dict:
