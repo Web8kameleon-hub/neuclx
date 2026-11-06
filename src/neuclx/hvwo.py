@@ -62,3 +62,17 @@ class HVWOLattice:
     def contract(self, axes: Iterable[Axis]) -> float:
         allowed = frozenset(axes)
         return sum(c.activation for c in self.cells.values() if c.axis in allowed)
+
+    def directional_derivative(self, axis: Axis, layer: int) -> float:
+        """Ndryshimi i aktivizimit përgjatë aksit — ky është 'drejtimi'.
+
+        Për aksin VERTICAL: vlerë pozitive = lart, negative = poshtë.
+        Kthen 0.0 nëse ka më pak se 2 qeliza në aksin/shtresën e dhënë.
+        """
+        cells = sorted(
+            [c for c in self.cells.values() if c.axis is axis and c.layer == layer],
+            key=lambda c: c.coordinate,
+        )
+        if len(cells) < 2:
+            return 0.0
+        return (cells[-1].activation - cells[0].activation) / (len(cells) - 1)
